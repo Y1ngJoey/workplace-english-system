@@ -378,7 +378,8 @@ export default function WeeklyPage() {
     if (!supabase || !confirm("删除这条复盘？")) {
       return;
     }
-    const { error } = await supabase.from("review_items").delete().eq("id", item.id);
+    const client = supabase;
+    const { error } = await client.from("review_items").delete().eq("id", item.id);
     if (error) {
       toast({ title: "删除失败", description: error.message, tone: "error" });
       return;
@@ -391,7 +392,7 @@ export default function WeeklyPage() {
     const merged = rest.map((nextItem) => sameSection.find((candidate) => candidate.id === nextItem.id) ?? nextItem);
     setItems(merged);
     await Promise.all(
-      sameSection.map((nextItem) => supabase.from("review_items").update({ position: nextItem.position }).eq("id", nextItem.id)),
+      sameSection.map((nextItem) => client.from("review_items").update({ position: nextItem.position }).eq("id", nextItem.id)),
     );
   }
 
@@ -399,6 +400,7 @@ export default function WeeklyPage() {
     if (!supabase || !event.over || event.active.id === event.over.id) {
       return;
     }
+    const client = supabase;
     const sectionItems = groupedItems[section];
     const oldIndex = sectionItems.findIndex((item) => item.id === event.active.id);
     const newIndex = sectionItems.findIndex((item) => item.id === event.over?.id);
@@ -415,7 +417,7 @@ export default function WeeklyPage() {
     );
 
     const results = await Promise.all(
-      reordered.map((item) => supabase.from("review_items").update({ position: item.position }).eq("id", item.id)),
+      reordered.map((item) => client.from("review_items").update({ position: item.position }).eq("id", item.id)),
     );
     const error = results.find((result) => result.error)?.error;
     if (error) {
