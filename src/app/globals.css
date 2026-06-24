@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #fbfaf7;
+  --card: #ffffff;
+  --ink: #5a4660;
+  --ink-2: #7a6982;
+  --slate: #a99fae;
+  --line: #ece8e2;
+  --line-2: #f4f1eb;
+  --pink: #f0a4c0;
+  --pink-deep: #d8729a;
+  --pink-soft: #fce8f1;
+  --pink-line: #f6dde8;
+  --blue: #90bddf;
+  --blue-deep: #5a8fc6;
+  --blue-soft: #e8f1f9;
+  --blue-line: #d6e6f4;
+  --shadow: 0 4px 18px rgba(150, 140, 150, 0.11);
+  --font-baloo: "Baloo 2";
+  --font-nunito: "Nunito";
+  --font-noto-sans-sc: "Noto Sans SC";
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 14% 6%, rgba(252, 232, 241, 0.75), transparent 28rem),
+    radial-gradient(circle at 86% 14%, rgba(232, 241, 249, 0.72), transparent 28rem),
+    var(--paper);
+  color: var(--ink-2);
+  font-family: var(--font-nunito), var(--font-noto-sans-sc), system-ui, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid rgba(90, 143, 198, 0.28);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--pink-soft);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.text-balance {
+  text-wrap: balance;
+}
