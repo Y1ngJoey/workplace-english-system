@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, Edit3, Loader2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
-import { CorpusEntryDialog, scenarios } from "@/components/corpus-entry-dialog";
+import { CorpusEntryDialog, DEFAULT_SCENARIOS } from "@/components/corpus-entry-dialog";
 import { useCorpusDialog } from "@/components/corpus-dialog-context";
 import { PageHeading } from "@/components/page-heading";
 import { useToast } from "@/components/toast-provider";
@@ -70,6 +70,14 @@ export default function CorpusPage() {
       return scenarioMatch && (!needle || text.includes(needle));
     });
   }, [entries, query, scenario]);
+
+  const scenarioFilters = useMemo(() => {
+    const savedScenarios = Array.from(
+      new Set(entries.map((entry) => entry.scenario.trim()).filter(Boolean)),
+    );
+    const filters = savedScenarios.length > 0 ? savedScenarios : DEFAULT_SCENARIOS;
+    return ["全部", ...filters];
+  }, [entries]);
 
   async function deleteEntry(entry: CorpusEntry) {
     if (!supabase || !confirm("删除这条语料？")) {
@@ -162,7 +170,7 @@ export default function CorpusPage() {
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {["全部", ...scenarios].map((item) => (
+            {scenarioFilters.map((item) => (
               <button
                 key={item}
                 className={cn(
@@ -274,6 +282,7 @@ export default function CorpusPage() {
           if (!open) setEditingEntry(null);
         }}
         onSaved={load}
+        scenarioOptions={scenarioFilters.filter((item) => item !== "全部")}
       />
     </div>
   );

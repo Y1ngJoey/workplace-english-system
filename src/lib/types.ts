@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Scenario = "接待" | "展会" | "谈判" | "会议" | "合同" | "演讲" | "其他";
+export type Scenario = string;
 export type ReviewSection = "learned" | "used" | "mistakes" | "hard" | "next";
 
 export type CorpusEntry = {

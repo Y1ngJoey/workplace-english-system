@@ -15,22 +15,23 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
 import type { CorpusEntry, Scenario } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-export const scenarios: Scenario[] = ["接待", "展会", "谈判", "会议", "合同", "演讲", "其他"];
+export const DEFAULT_SCENARIOS: Scenario[] = ["接待", "展会", "谈判", "会议", "合同", "演讲", "其他"];
 
 type CorpusEntryDialogProps = {
   entry?: CorpusEntry | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSaved?: () => void;
+  scenarioOptions?: string[];
 };
 
 const emptyForm = {
-  scenario: "接待" as Scenario,
+  scenario: "",
   chinese_intent: "",
   english_expression: "",
   mistake_note: "",
@@ -38,12 +39,29 @@ const emptyForm = {
   source: "",
 };
 
-export function CorpusEntryDialog({ entry, open, onOpenChange, onSaved }: CorpusEntryDialogProps = {}) {
+function uniqueScenarios(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+}
+
+export function CorpusEntryDialog({
+  entry,
+  open,
+  onOpenChange,
+  onSaved,
+  scenarioOptions = [],
+}: CorpusEntryDialogProps = {}) {
   const context = useCorpusDialog();
   const { user } = useAuth();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [savedScenarios, setSavedScenarios] = useState<string[]>([]);
 
   const controlled = typeof open === "boolean";
   const dialogOpen = controlled ? open : context.open;
@@ -56,7 +74,7 @@ export function CorpusEntryDialog({ entry, open, onOpenChange, onSaved }: Corpus
     }
     if (entry) {
       setForm({
-        scenario: (entry.scenario as Scenario) || "接待",
+        scenario: entry.scenario || "",
         chinese_intent: entry.chinese_intent ?? "",
         english_expression: entry.english_expression,
         mistake_note: entry.mistake_note ?? "",
@@ -68,7 +86,36 @@ export function CorpusEntryDialog({ entry, open, onOpenChange, onSaved }: Corpus
     }
   }, [dialogOpen, entry]);
 
-  const canSave = useMemo(() => form.english_expression.trim().length > 0, [form.english_expression]);
+  useEffect(() => {
+    if (!dialogOpen || !supabase || !user) {
+      return;
+    }
+
+    let ignore = false;
+    supabase
+      .from("corpus_entries")
+      .select("scenario")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (!ignore) {
+          setSavedScenarios(uniqueScenarios((data ?? []).map((item) => item.scenario)));
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [dialogOpen, user]);
+
+  const scenarioSuggestions = useMemo(
+    () => uniqueScenarios([...scenarioOptions, ...savedScenarios, ...DEFAULT_SCENARIOS]),
+    [savedScenarios, scenarioOptions],
+  );
+
+  const canSave = useMemo(
+    () => form.scenario.trim().length > 0 && form.english_expression.trim().length > 0,
+    [form.english_expression, form.scenario],
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -79,7 +126,7 @@ export function CorpusEntryDialog({ entry, open, onOpenChange, onSaved }: Corpus
     setSaving(true);
     const payload = {
       user_id: user.id,
-      scenario: form.scenario,
+      scenario: form.scenario.trim(),
       chinese_intent: form.chinese_intent.trim() || null,
       english_expression: form.english_expression.trim(),
       mistake_note: form.mistake_note.trim() || null,
@@ -123,19 +170,37 @@ export function CorpusEntryDialog({ entry, open, onOpenChange, onSaved }: Corpus
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>场景</Label>
-              <Select value={form.scenario} onValueChange={(value) => setForm((prev) => ({ ...prev, scenario: value as Scenario }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="选择场景" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scenarios.map((scenario) => (
-                    <SelectItem key={scenario} value={scenario}>
-                      {scenario}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="scenario">场景</Label>
+              <Input
+                id="scenario"
+                list="corpus-scenario-options"
+                required
+                value={form.scenario}
+                onChange={(event) => setForm((prev) => ({ ...prev, scenario: event.target.value }))}
+                placeholder="输入新场景，例：客户催交期"
+              />
+              <datalist id="corpus-scenario-options">
+                {scenarioSuggestions.map((scenario) => (
+                  <option key={scenario} value={scenario} />
+                ))}
+              </datalist>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {scenarioSuggestions.slice(0, 8).map((scenario) => (
+                  <button
+                    key={scenario}
+                    type="button"
+                    className={cn(
+                      "shrink-0 rounded-pill border px-3 py-1.5 text-xs font-bold transition",
+                      form.scenario === scenario
+                        ? "border-pink-line bg-pink-soft text-pink-deep"
+                        : "border-line bg-white text-ink-2 hover:bg-line-2",
+                    )}
+                    onClick={() => setForm((prev) => ({ ...prev, scenario }))}
+                  >
+                    {scenario}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="source">来源</Label>
