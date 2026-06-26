@@ -4,10 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  BriefcaseBusiness,
   CalendarDays,
+  Globe2,
+  Home,
   LineChart,
   Mic2,
+  Music2,
   NotebookTabs,
+  Plane,
   Plus,
   Settings,
   Sparkles,
@@ -33,6 +38,23 @@ const outerNav = [
   { href: "/app/ideas", label: "选题灵感", icon: Sparkles, tone: "blue", disabled: true },
   { href: "/app/validation", label: "验证看板", icon: LineChart, tone: "blue", disabled: true },
 ] as const;
+
+const mainNav = [
+  { href: "/app/home", label: "首页", icon: Home, tone: "pink", match: (path: string) => path === "/app/home" },
+  { href: "/app/today", label: "外贸英语", icon: Globe2, tone: "pink", match: (path: string) => englishRoutes.has(path) },
+  { href: "/app/jazz", label: "爵士档案", icon: Music2, tone: "grape", match: (path: string) => path.startsWith("/app/jazz") },
+  { href: "/app/travel", label: "旅行美食", icon: Plane, tone: "mint", match: (path: string) => path.startsWith("/app/travel") },
+  { href: "/app/career", label: "职业历程", icon: BriefcaseBusiness, tone: "blue", match: (path: string) => path.startsWith("/app/career") },
+] as const;
+
+const englishRoutes = new Set([
+  "/app/today",
+  "/app/corpus",
+  "/app/weekly",
+  "/app/roleplay",
+  "/app/growth",
+  "/app/settings",
+]);
 
 function NavItem({
   item,
@@ -84,10 +106,72 @@ function TopStrip() {
   );
 }
 
-function ShellContent({ children }: { children: React.ReactNode }) {
+function MainTopNav() {
+  const pathname = usePathname();
+
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <aside className="border-b border-line bg-card/80 px-4 py-4 backdrop-blur lg:min-h-screen lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Link href="/app/home" className="font-display text-2xl font-extrabold text-ink">
+          Joey 的个人主场
+        </Link>
+        <nav className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="个人主场导航">
+          {mainNav.map((item) => {
+            const active = item.match(pathname);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-pill border px-4 text-sm font-extrabold transition",
+                  item.tone === "pink" &&
+                    (active
+                      ? "border-pink-line bg-pink-soft text-pink-deep"
+                      : "border-transparent text-ink-2 hover:bg-pink-soft"),
+                  item.tone === "grape" &&
+                    (active
+                      ? "border-grape-line bg-grape-soft text-grape-deep"
+                      : "border-transparent text-ink-2 hover:bg-grape-soft"),
+                  item.tone === "mint" &&
+                    (active
+                      ? "border-mint-line bg-mint-soft text-mint-deep"
+                      : "border-transparent text-ink-2 hover:bg-mint-soft"),
+                  item.tone === "blue" &&
+                    (active
+                      ? "border-blue-line bg-blue-soft text-blue-deep"
+                      : "border-transparent text-ink-2 hover:bg-blue-soft"),
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function ShellContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const showEnglishShell = englishRoutes.has(pathname);
+
+  if (!showEnglishShell) {
+    return (
+      <div className="min-h-screen">
+        <MainTopNav />
+        <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen">
+      <MainTopNav />
+      <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <aside className="border-b border-line bg-card/80 px-4 py-4 backdrop-blur lg:min-h-[calc(100vh-73px)] lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
         <div className="mb-5 flex items-center justify-between gap-3 lg:block">
           <Link href="/app/today" className="font-display text-2xl font-extrabold text-ink">
             外贸英语 ♡ 工作台
@@ -126,6 +210,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
         <TopStrip />
         <div className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</div>
       </main>
+      </div>
       <CorpusEntryDialog />
     </div>
   );

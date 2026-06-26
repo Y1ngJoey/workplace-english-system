@@ -121,6 +121,48 @@ export type UserSettings = {
   created_at: string | null;
 };
 
+export type Visibility = "private" | "public";
+
+export type SiteText = {
+  id: string;
+  user_id: string;
+  slot: string;
+  content: string;
+  updated_at: string | null;
+};
+
+export type JazzTimeline = {
+  id: string;
+  user_id: string;
+  entry_date: string;
+  title: string;
+  note: string;
+  video_url: string | null;
+  visibility: Visibility;
+  position: number;
+  created_at: string | null;
+};
+
+export type JazzCompare = {
+  id: string;
+  user_id: string;
+  title: string;
+  before_url: string | null;
+  after_url: string | null;
+  visibility: Visibility;
+  created_at: string | null;
+};
+
+export type JazzInspiration = {
+  id: string;
+  user_id: string;
+  video_url: string | null;
+  note: string;
+  tags: string[] | null;
+  visibility: Visibility;
+  created_at: string | null;
+};
+
 type RowMap = {
   corpus_entries: CorpusEntry;
   daily_logs: DailyLog;
@@ -132,6 +174,10 @@ type RowMap = {
   roleplay_scripts: RoleplayScript;
   growth_log: GrowthLog;
   user_settings: UserSettings;
+  site_texts: SiteText;
+  jazz_timeline: JazzTimeline;
+  jazz_compare: JazzCompare;
+  jazz_inspiration: JazzInspiration;
   idea_bank: {
     id: string;
     user_id: string;
