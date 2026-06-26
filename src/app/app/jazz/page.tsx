@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowUp,
   CalendarDays,
+  Copy,
   Goal,
   Heart,
   Loader2,
@@ -79,12 +80,16 @@ function VideoUrlInput({
   placeholder,
   className,
   inputClassName,
+  copyable = false,
+  onCopy,
 }: {
   value: string | null;
   onSave: (value: string) => Promise<void>;
   placeholder: string;
   className?: string;
   inputClassName?: string;
+  copyable?: boolean;
+  onCopy?: (value: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(value ?? "");
   const [saving, setSaving] = useState(false);
@@ -100,8 +105,19 @@ function VideoUrlInput({
     setSaving(false);
   }
 
-  return (
-    <div className={cn("relative", className)}>
+  async function copyDraft() {
+    const nextValue = draft.trim();
+    if (!nextValue) return;
+    if (nextValue !== (value ?? "")) {
+      setSaving(true);
+      await onSave(nextValue);
+      setSaving(false);
+    }
+    await onCopy?.(nextValue);
+  }
+
+  const input = (
+    <div className={cn("relative", copyable && "min-w-0 flex-1")}>
       <Input
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
@@ -110,6 +126,31 @@ function VideoUrlInput({
         className={inputClassName}
       />
       {saving ? <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-blue-deep" /> : null}
+    </div>
+  );
+
+  if (copyable) {
+    return (
+      <div className={cn("flex items-center gap-2", className)}>
+        {input}
+        <Button
+          variant="softPink"
+          size="icon"
+          className="h-10 w-10"
+          aria-label="复制视频网址"
+          disabled={!draft.trim()}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => copyDraft()}
+        >
+          <Copy className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("relative", className)}>
+      {input}
     </div>
   );
 }
@@ -189,6 +230,21 @@ export default function JazzPage() {
     if (error) {
       toast({ title: "灵感保存失败", description: error.message, tone: "error" });
       await load();
+    }
+  }
+
+  async function copyVideoUrl(url: string | null | undefined) {
+    const value = url?.trim();
+    if (!value) {
+      toast({ title: "还没有网址可复制", description: "先粘贴视频链接，再点复制。", tone: "error" });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(value);
+      toast({ title: "视频网址已复制", tone: "success" });
+    } catch {
+      toast({ title: "复制失败", description: "可以先手动选中网址复制。", tone: "error" });
     }
   }
 
@@ -398,14 +454,9 @@ export default function JazzPage() {
                       value={item.video_url}
                       placeholder="粘贴视频链接"
                       inputClassName="h-10 rounded-pill px-3 text-xs"
+                      copyable
+                      onCopy={copyVideoUrl}
                       onSave={(value) => updateTimeline(item.id, { video_url: value || null })}
-                    />
-                    <EditableText
-                      aria-label="时间线正文"
-                      value={item.note}
-                      onSave={(value) => updateTimeline(item.id, { note: value })}
-                      multiline
-                      inputClassName="text-xs leading-5 text-ink-2"
                     />
                     <div className="mt-auto space-y-2 border-t border-line/80 pt-3">
                       <Input
