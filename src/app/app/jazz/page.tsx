@@ -45,6 +45,42 @@ function sortTimelineRows(rows: JazzTimeline[]) {
   );
 }
 
+function formatTimelineLabel(value: string) {
+  const [year, month] = value.split("-");
+  return year && month ? `${year} · ${month}` : value;
+}
+
+function makeTimelineCurvePath(height: number, count: number) {
+  const itemCount = Math.max(count, 2);
+  const startY = 42;
+  const endY = height - 42;
+  const step = (endY - startY) / (itemCount - 1);
+  const parts = [`M 380,${startY}`];
+
+  for (let index = 0; index < itemCount; index += 1) {
+    const x = index % 2 === 0 ? 470 : 290;
+    const y = startY + step * index;
+    const previousY = index === 0 ? startY : startY + step * (index - 1);
+    parts.push(`C 380,${previousY + step * 0.38} ${x},${y - step * 0.38} ${x},${y}`);
+  }
+
+  parts.push(`C 380,${endY - 20} 395,${endY - 8} 380,${endY}`);
+  return parts.join(" ");
+}
+
+function getTimelinePoint(index: number, count: number, height: number) {
+  const itemCount = Math.max(count, 1);
+  const y = itemCount === 1 ? height / 2 : 82 + (index / (itemCount - 1)) * (height - 164);
+  const right = index % 2 === 0;
+
+  return {
+    cardLeft: right ? "62%" : "2%",
+    dotLeft: right ? "61.8%" : "38.2%",
+    labelClassName: right ? "-translate-x-full -translate-y-1/2 -ml-3" : "translate-x-0 -translate-y-1/2 ml-3",
+    top: `${(y / height) * 100}%`,
+  };
+}
+
 function getErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error) {
     return String((error as { message: unknown }).message);
@@ -155,6 +191,163 @@ function VideoUrlInput({
   );
 }
 
+function TimelineVideoField({
+  label,
+  tone,
+  url,
+  placeholder,
+  onSave,
+  onCopy,
+}: {
+  label: string;
+  tone: "teach" | "mine";
+  url: string | null | undefined;
+  placeholder: string;
+  onSave: (value: string) => Promise<void>;
+  onCopy: (value: string) => Promise<void>;
+}) {
+  return (
+    <div className="space-y-2">
+      <div
+        className={cn(
+          "flex items-center gap-1.5 px-1 text-[11px] font-extrabold",
+          tone === "teach" ? "text-grape-deep" : "text-pink-deep",
+        )}
+      >
+        {label}
+      </div>
+      <VideoPreview
+        url={url}
+        label={label}
+        showLabel={false}
+        className={cn(tone === "teach" ? "border-grape-line" : "border-pink-line")}
+      />
+      <VideoUrlInput
+        value={url ?? null}
+        placeholder={placeholder}
+        inputClassName="h-9 rounded-pill px-3 text-[11px]"
+        copyable
+        onCopy={onCopy}
+        onSave={onSave}
+      />
+    </div>
+  );
+}
+
+function TimelineCard({
+  item,
+  index,
+  total,
+  point,
+  onUpdate,
+  onMove,
+  onDelete,
+  onCopy,
+}: {
+  item: JazzTimeline;
+  index: number;
+  total: number;
+  point?: ReturnType<typeof getTimelinePoint>;
+  onUpdate: (id: string, patch: Partial<JazzTimeline>) => Promise<void>;
+  onMove: (item: JazzTimeline, direction: -1 | 1) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  onCopy: (value: string) => Promise<void>;
+}) {
+  return (
+    <Card
+      className={cn(
+        "overflow-hidden border-grape-line/70 bg-white/95 shadow-milk",
+        point ? "absolute w-[36%] -translate-y-1/2" : "border-l-4 border-l-grape",
+      )}
+      style={point ? { left: point.cardLeft, top: point.top } : undefined}
+    >
+      <CardContent className="flex h-full flex-col gap-3 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <Input
+            type="date"
+            value={item.entry_date}
+            className="h-8 rounded-pill px-3 text-[11px]"
+            onChange={(event) => onUpdate(item.id, { entry_date: event.target.value })}
+          />
+          <VisibilityButton compact value={item.visibility} onChange={(visibility) => onUpdate(item.id, { visibility })} />
+        </div>
+
+        <EditableText
+          aria-label="时间线标题"
+          value={item.title}
+          onSave={(value) => onUpdate(item.id, { title: value || "未命名记录" })}
+          inputClassName="font-display text-lg font-extrabold leading-tight text-ink"
+        />
+
+        <div className="space-y-3">
+          <TimelineVideoField
+            label="🎓 对标教学"
+            tone="teach"
+            url={item.reference_url}
+            placeholder="对标教学视频链接"
+            onCopy={onCopy}
+            onSave={(value) => onUpdate(item.id, { reference_url: value || null })}
+          />
+          <div className="flex items-center gap-2 px-1">
+            <span className="h-px flex-1 bg-line" />
+            <span className="rounded-pill border border-line bg-paper px-3 py-0.5 text-[10px] font-extrabold text-slate">
+              照着练
+            </span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+          <TimelineVideoField
+            label="🌸 我的练习"
+            tone="mine"
+            url={item.video_url}
+            placeholder="我的练习视频链接"
+            onCopy={onCopy}
+            onSave={(value) => onUpdate(item.id, { video_url: value || null })}
+          />
+        </div>
+
+        <EditableText
+          aria-label="时间线笔记"
+          value={item.note}
+          onSave={(value) => onUpdate(item.id, { note: value })}
+          multiline
+          inputClassName="text-xs leading-5 text-ink-2"
+        />
+
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-line/80 pt-3">
+          <span className="rounded-pill bg-grape-soft px-3 py-1 text-[11px] font-extrabold text-grape-deep">
+            {formatTimelineLabel(item.entry_date)}
+          </span>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="上移"
+              onClick={() => onMove(item, -1)}
+              disabled={index === 0}
+            >
+              <ArrowUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label="下移"
+              onClick={() => onMove(item, 1)}
+              disabled={index === total - 1}
+            >
+              <ArrowDown className="h-4 w-4" />
+            </Button>
+            <Button variant="danger" size="icon" className="h-8 w-8" aria-label="删除" onClick={() => onDelete(item.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function JazzPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -201,6 +394,11 @@ export default function JazzPage() {
   const nextTimelinePosition = useMemo(
     () => (timeline.length ? Math.max(...timeline.map((item) => item.position)) + 1 : 0),
     [timeline],
+  );
+  const timelineCurveHeight = useMemo(() => Math.max(860, timeline.length * 360), [timeline.length]);
+  const timelineCurvePath = useMemo(
+    () => makeTimelineCurvePath(timelineCurveHeight, timeline.length),
+    [timelineCurveHeight, timeline.length],
   );
 
   async function updateTimeline(id: string, patch: Partial<JazzTimeline>) {
@@ -433,80 +631,102 @@ export default function JazzPage() {
           {timeline.length === 0 ? (
             <EmptyJazzCard title="还没有时间线记录" action="记一笔" onClick={addTimeline} busy={busyAction === "timeline"} />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {timeline.map((item, index) => (
-                <Card key={item.id} className="overflow-hidden border-grape-line/70 bg-white/90">
-                  <CardContent className="flex h-full flex-col gap-3 p-3">
-                    <EditableText
-                      aria-label="时间线标题"
-                      value={item.title}
-                      onSave={(value) => updateTimeline(item.id, { title: value || "未命名记录" })}
-                      inputClassName="font-display text-lg font-extrabold leading-tight text-ink"
-                    />
-                    <VideoPreview
-                      url={item.video_url}
-                      label="时间线视频"
-                      orientation="portrait"
-                      showLabel={false}
-                      className="shadow-milk"
-                    />
-                    <VideoUrlInput
-                      value={item.video_url}
-                      placeholder="粘贴视频链接"
-                      inputClassName="h-10 rounded-pill px-3 text-xs"
-                      copyable
-                      onCopy={copyVideoUrl}
-                      onSave={(value) => updateTimeline(item.id, { video_url: value || null })}
-                    />
-                    <div className="mt-auto space-y-2 border-t border-line/80 pt-3">
-                      <Input
-                        type="date"
-                        value={item.entry_date}
-                        className="h-9 rounded-pill px-3 text-xs"
-                        onChange={(event) => updateTimeline(item.id, { entry_date: event.target.value })}
-                      />
-                      <div className="flex items-center justify-between gap-2">
-                        <VisibilityButton
-                          compact
-                          value={item.visibility}
-                          onChange={(visibility) => updateTimeline(item.id, { visibility })}
+            <div className="mx-auto max-w-[920px]">
+              <div className="mb-4 text-center">
+                <h2 className="font-display text-3xl font-extrabold text-ink">成长时间线 🎷</h2>
+                <p className="mt-1 text-sm font-bold text-slate">左边对标、右边自己跳，照着练最快 ♡</p>
+              </div>
+
+              <div className="hidden lg:block">
+                <div className="relative mx-auto max-w-[760px]" style={{ height: timelineCurveHeight }}>
+                  <svg
+                    className="absolute inset-0 h-full w-full"
+                    viewBox={`0 0 760 ${timelineCurveHeight}`}
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient id="jazzTimelineRibbon" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stopColor="#F0A4C0" />
+                        <stop offset="0.5" stopColor="#C3A4DD" />
+                        <stop offset="1" stopColor="#A8D8C0" />
+                      </linearGradient>
+                    </defs>
+                    <path d={timelineCurvePath} stroke="url(#jazzTimelineRibbon)" strokeWidth="13" strokeLinecap="round" opacity="0.18" />
+                    <path d={timelineCurvePath} stroke="url(#jazzTimelineRibbon)" strokeWidth="4.5" strokeLinecap="round" />
+                  </svg>
+
+                  <div className="absolute inset-0">
+                    {timeline.map((item, index) => {
+                      const point = getTimelinePoint(index, timeline.length, timelineCurveHeight);
+                      return (
+                        <span
+                          key={`${item.id}-dot`}
+                          className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3.5px] border-grape bg-white shadow-[0_0_0_5px_var(--grape-soft)]"
+                          style={{ left: point.dotLeft, top: point.top }}
                         />
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label="上移"
-                            onClick={() => moveTimeline(item, -1)}
-                            disabled={index === 0}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label="下移"
-                            onClick={() => moveTimeline(item, 1)}
-                            disabled={index === timeline.length - 1}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="danger"
-                            size="icon"
-                            className="h-8 w-8"
-                            aria-label="删除"
-                            onClick={() => deleteRow("jazz_timeline", item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      );
+                    })}
+                  </div>
+
+                  <div className="absolute inset-0">
+                    {timeline.map((item, index) => {
+                      const point = getTimelinePoint(index, timeline.length, timelineCurveHeight);
+                      return (
+                        <span
+                          key={`${item.id}-label`}
+                          className={cn(
+                            "absolute whitespace-nowrap rounded-pill border border-grape-line bg-grape-soft px-3 py-1 text-[11px] font-extrabold text-grape-deep",
+                            point.labelClassName,
+                          )}
+                          style={{ left: point.dotLeft, top: point.top }}
+                        >
+                          {formatTimelineLabel(item.entry_date)}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  <div className="absolute inset-0">
+                    {timeline.map((item, index) => (
+                      <TimelineCard
+                        key={item.id}
+                        item={item}
+                        index={index}
+                        total={timeline.length}
+                        point={getTimelinePoint(index, timeline.length, timelineCurveHeight)}
+                        onUpdate={updateTimeline}
+                        onMove={moveTimeline}
+                        onDelete={(id) => deleteRow("jazz_timeline", id)}
+                        onCopy={copyVideoUrl}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 lg:hidden">
+                {timeline.map((item, index) => (
+                  <TimelineCard
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    total={timeline.length}
+                    onUpdate={updateTimeline}
+                    onMove={moveTimeline}
+                    onDelete={(id) => deleteRow("jazz_timeline", id)}
+                    onCopy={copyVideoUrl}
+                  />
+                ))}
+              </div>
+
+              <div className="mx-auto mt-6 max-w-xl rounded-[18px] border border-mint-line bg-gradient-to-b from-white to-mint-soft px-5 py-4 text-center">
+                <p className="text-sm font-extrabold text-mint-deep">一条线串起所有进步</p>
+                <p className="mt-1 text-xs leading-5 text-slate">
+                  每条都能放「对标教学 + 我的练习」两个视频，照着改最快 · 标题和笔记可改 · 可设私密/公开
+                </p>
+              </div>
             </div>
           )}
         </section>

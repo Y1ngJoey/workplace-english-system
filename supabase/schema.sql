@@ -212,6 +212,7 @@ create table if not exists public.jazz_timeline (
   entry_date date not null default current_date,
   title text not null default '',
   note text not null default '',
+  reference_url text,
   video_url text,
   visibility text not null default 'private',
   position int not null default 0,
@@ -220,6 +221,9 @@ create table if not exists public.jazz_timeline (
 
 create index if not exists jazz_timeline_user_date_position_idx
   on public.jazz_timeline (user_id, entry_date desc, position);
+
+alter table public.jazz_timeline
+  add column if not exists reference_url text;
 
 create table if not exists public.jazz_compare (
   id uuid primary key default gen_random_uuid(),

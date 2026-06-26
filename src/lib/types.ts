@@ -137,6 +137,7 @@ export type JazzTimeline = {
   entry_date: string;
   title: string;
   note: string;
+  reference_url: string | null;
   video_url: string | null;
   visibility: Visibility;
   position: number;
