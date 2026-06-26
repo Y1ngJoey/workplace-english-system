@@ -598,14 +598,6 @@ export default function JazzPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[20px] border border-grape-line bg-grape-soft/70 p-6 shadow-milk">
-        <Badge tone="neutral">爵士档案</Badge>
-        <h1 className="mt-4 font-display text-4xl font-extrabold text-ink">把每一次变好，都留一点证据</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-ink-2">
-          成长时间线、前后对比和灵感收藏夹都只保存文字与外部视频链接。
-        </p>
-      </section>
-
       <div className="flex gap-2 overflow-x-auto pb-1">
         {tabs.map((tab) => {
           const Icon = tab.icon;
