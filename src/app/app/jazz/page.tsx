@@ -54,15 +54,18 @@ function getErrorMessage(error: unknown) {
 function VisibilityButton({
   value,
   onChange,
+  compact = false,
 }: {
   value: Visibility;
   onChange: (visibility: Visibility) => Promise<void>;
+  compact?: boolean;
 }) {
   const nextValue = value === "private" ? "public" : "private";
   return (
     <Button
       variant={value === "private" ? "outline" : "softBlue"}
       size="sm"
+      className={cn(compact && "min-h-8 px-3 text-[11px]")}
       onClick={() => onChange(nextValue)}
     >
       {value === "private" ? "🔒 私密" : "🌐 公开"}
@@ -74,10 +77,14 @@ function VideoUrlInput({
   value,
   onSave,
   placeholder,
+  className,
+  inputClassName,
 }: {
   value: string | null;
   onSave: (value: string) => Promise<void>;
   placeholder: string;
+  className?: string;
+  inputClassName?: string;
 }) {
   const [draft, setDraft] = useState(value ?? "");
   const [saving, setSaving] = useState(false);
@@ -94,8 +101,14 @@ function VideoUrlInput({
   }
 
   return (
-    <div className="relative">
-      <Input value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={save} placeholder={placeholder} />
+    <div className={cn("relative", className)}>
+      <Input
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={save}
+        placeholder={placeholder}
+        className={inputClassName}
+      />
       {saving ? <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-blue-deep" /> : null}
     </div>
   );
@@ -364,55 +377,80 @@ export default function JazzPage() {
           {timeline.length === 0 ? (
             <EmptyJazzCard title="还没有时间线记录" action="记一笔" onClick={addTimeline} busy={busyAction === "timeline"} />
           ) : (
-            <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {timeline.map((item, index) => (
-                <Card key={item.id} className="border-grape-line/70">
-                  <CardContent className="grid gap-5 p-5 lg:grid-cols-[12rem_1fr]">
-                    <div className="space-y-3">
+                <Card key={item.id} className="overflow-hidden border-grape-line/70 bg-white/90">
+                  <CardContent className="flex h-full flex-col gap-3 p-3">
+                    <VideoPreview
+                      url={item.video_url}
+                      label={item.title || "时间线视频"}
+                      orientation="portrait"
+                      className="shadow-milk"
+                    />
+                    <VideoUrlInput
+                      value={item.video_url}
+                      placeholder="粘贴视频链接"
+                      inputClassName="h-10 rounded-pill px-3 text-xs"
+                      onSave={(value) => updateTimeline(item.id, { video_url: value || null })}
+                    />
+                    <EditableText
+                      aria-label="时间线标题"
+                      value={item.title}
+                      onSave={(value) => updateTimeline(item.id, { title: value || "未命名记录" })}
+                      inputClassName="font-display text-lg font-extrabold leading-tight text-ink"
+                    />
+                    <EditableText
+                      aria-label="时间线正文"
+                      value={item.note}
+                      onSave={(value) => updateTimeline(item.id, { note: value })}
+                      multiline
+                      inputClassName="text-xs leading-5 text-ink-2"
+                    />
+                    <div className="mt-auto space-y-2 border-t border-line/80 pt-3">
                       <Input
                         type="date"
                         value={item.entry_date}
+                        className="h-9 rounded-pill px-3 text-xs"
                         onChange={(event) => updateTimeline(item.id, { entry_date: event.target.value })}
                       />
-                      <VisibilityButton value={item.visibility} onChange={(visibility) => updateTimeline(item.id, { visibility })} />
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" aria-label="上移" onClick={() => moveTimeline(item, -1)} disabled={index === 0}>
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="下移"
-                          onClick={() => moveTimeline(item, 1)}
-                          disabled={index === timeline.length - 1}
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
-                        <Button variant="danger" size="icon" aria-label="删除" onClick={() => deleteRow("jazz_timeline", item.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center justify-between gap-2">
+                        <VisibilityButton
+                          compact
+                          value={item.visibility}
+                          onChange={(visibility) => updateTimeline(item.id, { visibility })}
+                        />
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label="上移"
+                            onClick={() => moveTimeline(item, -1)}
+                            disabled={index === 0}
+                          >
+                            <ArrowUp className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label="下移"
+                            onClick={() => moveTimeline(item, 1)}
+                            disabled={index === timeline.length - 1}
+                          >
+                            <ArrowDown className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label="删除"
+                            onClick={() => deleteRow("jazz_timeline", item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-4">
-                      <EditableText
-                        aria-label="时间线标题"
-                        value={item.title}
-                        onSave={(value) => updateTimeline(item.id, { title: value || "未命名记录" })}
-                        inputClassName="font-display text-2xl font-extrabold text-ink"
-                      />
-                      <EditableText
-                        aria-label="时间线正文"
-                        value={item.note}
-                        onSave={(value) => updateTimeline(item.id, { note: value })}
-                        multiline
-                        inputClassName="text-sm leading-7 text-ink-2"
-                      />
-                      <VideoUrlInput
-                        value={item.video_url}
-                        placeholder="粘贴 YouTube / B站 / 小红书视频链接"
-                        onSave={(value) => updateTimeline(item.id, { video_url: value || null })}
-                      />
-                      <VideoPreview url={item.video_url} label="时间线视频" />
                     </div>
                   </CardContent>
                 </Card>
@@ -433,43 +471,55 @@ export default function JazzPage() {
           {compare.length === 0 ? (
             <EmptyJazzCard title="还没有前后对比" action="加一组" onClick={addCompare} busy={busyAction === "compare"} />
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-4 xl:grid-cols-2">
               {compare.map((item) => (
-                <Card key={item.id}>
-                  <CardHeader>
+                <Card key={item.id} className="overflow-hidden bg-white/90">
+                  <CardHeader className="p-4 pb-2">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <EditableText
                         aria-label="对比标题"
                         value={item.title}
                         onSave={(value) => updateCompare(item.id, { title: value || "未命名对比" })}
-                        inputClassName="font-display text-2xl font-extrabold text-ink"
+                        inputClassName="font-display text-xl font-extrabold leading-tight text-ink"
                       />
                       <div className="flex shrink-0 gap-2">
-                        <VisibilityButton value={item.visibility} onChange={(visibility) => updateCompare(item.id, { visibility })} />
-                        <Button variant="danger" size="icon" aria-label="删除" onClick={() => deleteRow("jazz_compare", item.id)}>
+                        <VisibilityButton
+                          compact
+                          value={item.visibility}
+                          onChange={(visibility) => updateCompare(item.id, { visibility })}
+                        />
+                        <Button
+                          variant="danger"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label="删除"
+                          onClick={() => deleteRow("jazz_compare", item.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="grid gap-4 lg:grid-cols-2">
+                  <CardContent className="grid gap-4 p-4 pt-2 sm:grid-cols-2">
                     <div className="space-y-3">
                       <Badge tone="pink">以前</Badge>
                       <VideoUrlInput
                         value={item.before_url}
                         placeholder="以前的视频链接"
+                        inputClassName="h-10 rounded-pill px-3 text-xs"
                         onSave={(value) => updateCompare(item.id, { before_url: value || null })}
                       />
-                      <VideoPreview url={item.before_url} label="以前" />
+                      <VideoPreview url={item.before_url} label="以前" orientation="portrait" />
                     </div>
                     <div className="space-y-3">
                       <Badge tone="blue">现在</Badge>
                       <VideoUrlInput
                         value={item.after_url}
                         placeholder="现在的视频链接"
+                        inputClassName="h-10 rounded-pill px-3 text-xs"
                         onSave={(value) => updateCompare(item.id, { after_url: value || null })}
                       />
-                      <VideoPreview url={item.after_url} label="现在" />
+                      <VideoPreview url={item.after_url} label="现在" orientation="portrait" />
                     </div>
                   </CardContent>
                 </Card>
@@ -495,31 +545,27 @@ export default function JazzPage() {
               busy={busyAction === "inspiration"}
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {inspiration.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="space-y-4 p-5">
-                    <div className="flex justify-between gap-2">
-                      <VisibilityButton value={item.visibility} onChange={(visibility) => updateInspiration(item.id, { visibility })} />
-                      <Button variant="danger" size="icon" aria-label="删除" onClick={() => deleteRow("jazz_inspiration", item.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                <Card key={item.id} className="overflow-hidden bg-white/90">
+                  <CardContent className="flex h-full flex-col gap-3 p-3">
+                    <VideoPreview url={item.video_url} label="灵感" orientation="portrait" className="shadow-milk" />
                     <VideoUrlInput
                       value={item.video_url}
-                      placeholder="想学的视频/想编的歌链接"
+                      placeholder="想学的视频链接"
+                      inputClassName="h-10 rounded-pill px-3 text-xs"
                       onSave={(value) => updateInspiration(item.id, { video_url: value || null })}
                     />
-                    <VideoPreview url={item.video_url} label="灵感" />
                     <EditableText
                       aria-label="灵感备注"
                       value={item.note}
                       onSave={(value) => updateInspiration(item.id, { note: value })}
                       multiline
-                      inputClassName="text-sm leading-7 text-ink-2"
+                      inputClassName="text-xs leading-5 text-ink-2"
                     />
                     <Input
                       value={(item.tags ?? []).join(", ")}
+                      className="h-10 rounded-pill px-3 text-xs"
                       onChange={(event) =>
                         setInspiration((current) =>
                           current.map((row) =>
@@ -539,10 +585,33 @@ export default function JazzPage() {
                       }
                       placeholder="标签，逗号分隔"
                     />
-                    <Button variant="softBlue" onClick={() => setAsGoal(item)} disabled={busyAction === "goal"}>
-                      {busyAction === "goal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Goal className="h-4 w-4" />}
-                      设为目标
-                    </Button>
+                    <div className="mt-auto space-y-2 border-t border-line/80 pt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <VisibilityButton
+                          compact
+                          value={item.visibility}
+                          onChange={(visibility) => updateInspiration(item.id, { visibility })}
+                        />
+                        <Button
+                          variant="danger"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label="删除"
+                          onClick={() => deleteRow("jazz_inspiration", item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="softBlue"
+                        className="w-full"
+                        onClick={() => setAsGoal(item)}
+                        disabled={busyAction === "goal"}
+                      >
+                        {busyAction === "goal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Goal className="h-4 w-4" />}
+                        设为目标
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

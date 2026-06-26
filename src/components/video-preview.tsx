@@ -2,13 +2,30 @@ import { ExternalLink, PlayCircle } from "lucide-react";
 import { parseVideoUrl } from "@/lib/video-embed";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
-export function VideoPreview({ url, label }: { url: string | null | undefined; label?: string }) {
+type VideoPreviewProps = {
+  url: string | null | undefined;
+  label?: string;
+  orientation?: "landscape" | "portrait";
+  className?: string;
+};
+
+export function VideoPreview({ url, label, orientation = "landscape", className }: VideoPreviewProps) {
   const video = parseVideoUrl(url);
+  const frameClassName = orientation === "portrait" ? "aspect-[9/16]" : "aspect-video";
+  const compact = orientation === "portrait";
 
   if (!video) {
     return (
-      <div className="flex min-h-32 items-center justify-center rounded-[18px] border border-dashed border-line bg-line-2/50 text-sm font-bold text-slate">
+      <div
+        className={cn(
+          "flex items-center justify-center rounded-[18px] border border-dashed border-line bg-line-2/50 px-4 text-center text-sm font-bold text-slate",
+          frameClassName,
+          compact ? "text-xs leading-5" : "min-h-32",
+          className,
+        )}
+      >
         {label ? `${label}：` : null}粘贴视频链接后显示预览
       </div>
     );
@@ -16,12 +33,25 @@ export function VideoPreview({ url, label }: { url: string | null | undefined; l
 
   if (video.kind === "embed") {
     return (
-      <div className="overflow-hidden rounded-[18px] border border-line bg-black shadow-sm">
-        <div className="flex items-center justify-between bg-card px-4 py-2 text-xs font-bold text-ink-2">
-          <span>{label ?? video.platform}</span>
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-[18px] border border-line bg-black shadow-sm",
+          compact ? frameClassName : "",
+          className,
+        )}
+      >
+        <div
+          className={cn(
+            "pointer-events-none absolute left-3 right-3 top-3 z-10 flex items-center justify-between gap-2 text-xs font-bold",
+            compact ? "text-white" : "text-ink-2",
+          )}
+        >
+          <span className={cn("truncate rounded-pill px-3 py-1", compact ? "bg-black/45" : "bg-white/90")}>
+            {label ?? video.platform}
+          </span>
           <Badge tone={video.platform === "Bilibili" ? "pink" : "blue"}>{video.platform}</Badge>
         </div>
-        <div className="aspect-video">
+        <div className={cn(frameClassName, compact ? "h-full" : "")}>
           <iframe
             title={`${label ?? video.platform} video`}
             src={video.embedUrl}
@@ -35,13 +65,15 @@ export function VideoPreview({ url, label }: { url: string | null | undefined; l
   }
 
   return (
-    <Card className="border-mint-line bg-mint-soft/50">
-      <CardContent className="p-4">
-        <div className="mb-3 flex items-center gap-2 text-mint-deep">
+    <Card className={cn("border-mint-line bg-mint-soft/50", frameClassName, className)}>
+      <CardContent className="flex h-full flex-col items-center justify-center p-4 text-center">
+        <div className="mb-3 flex items-center justify-center gap-2 text-mint-deep">
           <PlayCircle className="h-5 w-5" />
           <span className="text-sm font-extrabold">{label ?? video.platform}</span>
         </div>
-        <p className="mb-4 text-sm leading-6 text-ink-2">{video.reason}</p>
+        <p className={cn("mb-4 text-sm leading-6 text-ink-2", compact ? "line-clamp-4 text-xs leading-5" : "")}>
+          {video.reason}
+        </p>
         <a
           href={video.originalUrl}
           target="_blank"
