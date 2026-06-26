@@ -272,6 +272,12 @@ alter table public.jazz_timeline enable row level security;
 alter table public.jazz_compare enable row level security;
 alter table public.jazz_inspiration enable row level security;
 
+grant usage on schema public to authenticated, anon;
+grant select, insert, update, delete on public.site_texts to authenticated;
+grant select, insert, update, delete on public.jazz_timeline to authenticated;
+grant select, insert, update, delete on public.jazz_compare to authenticated;
+grant select, insert, update, delete on public.jazz_inspiration to authenticated;
+
 create policy "Admins can read own admin row"
   on public.app_admins for select to authenticated
   using (auth.uid() = user_id);
@@ -406,3 +412,5 @@ create policy "Users can manage own jazz inspiration"
   on public.jazz_inspiration for all to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+select pg_notify('pgrst', 'reload schema');
