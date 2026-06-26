@@ -555,23 +555,27 @@ export default function JazzPage() {
                   <CardContent className="grid gap-4 p-4 pt-2 sm:grid-cols-2">
                     <div className="space-y-3">
                       <Badge tone="pink">以前</Badge>
+                      <VideoPreview url={item.before_url} label="以前" orientation="portrait" showLabel={false} />
                       <VideoUrlInput
                         value={item.before_url}
                         placeholder="以前的视频链接"
                         inputClassName="h-10 rounded-pill px-3 text-xs"
+                        copyable
+                        onCopy={copyVideoUrl}
                         onSave={(value) => updateCompare(item.id, { before_url: value || null })}
                       />
-                      <VideoPreview url={item.before_url} label="以前" orientation="portrait" />
                     </div>
                     <div className="space-y-3">
                       <Badge tone="blue">现在</Badge>
+                      <VideoPreview url={item.after_url} label="现在" orientation="portrait" showLabel={false} />
                       <VideoUrlInput
                         value={item.after_url}
                         placeholder="现在的视频链接"
                         inputClassName="h-10 rounded-pill px-3 text-xs"
+                        copyable
+                        onCopy={copyVideoUrl}
                         onSave={(value) => updateCompare(item.id, { after_url: value || null })}
                       />
-                      <VideoPreview url={item.after_url} label="现在" orientation="portrait" />
                     </div>
                   </CardContent>
                 </Card>
@@ -601,41 +605,26 @@ export default function JazzPage() {
               {inspiration.map((item) => (
                 <Card key={item.id} className="overflow-hidden bg-white/90">
                   <CardContent className="flex h-full flex-col gap-3 p-3">
-                    <VideoPreview url={item.video_url} label="灵感" orientation="portrait" className="shadow-milk" />
+                    <EditableText
+                      aria-label="灵感标题"
+                      value={item.note}
+                      onSave={(value) => updateInspiration(item.id, { note: value || "想学这个感觉" })}
+                      inputClassName="font-display text-lg font-extrabold leading-tight text-ink"
+                    />
+                    <VideoPreview
+                      url={item.video_url}
+                      label="灵感"
+                      orientation="portrait"
+                      showLabel={false}
+                      className="shadow-milk"
+                    />
                     <VideoUrlInput
                       value={item.video_url}
                       placeholder="想学的视频链接"
                       inputClassName="h-10 rounded-pill px-3 text-xs"
+                      copyable
+                      onCopy={copyVideoUrl}
                       onSave={(value) => updateInspiration(item.id, { video_url: value || null })}
-                    />
-                    <EditableText
-                      aria-label="灵感备注"
-                      value={item.note}
-                      onSave={(value) => updateInspiration(item.id, { note: value })}
-                      multiline
-                      inputClassName="text-xs leading-5 text-ink-2"
-                    />
-                    <Input
-                      value={(item.tags ?? []).join(", ")}
-                      className="h-10 rounded-pill px-3 text-xs"
-                      onChange={(event) =>
-                        setInspiration((current) =>
-                          current.map((row) =>
-                            row.id === item.id
-                              ? { ...row, tags: event.target.value.split(",").map((tag) => tag.trim()).filter(Boolean) }
-                              : row,
-                          ),
-                        )
-                      }
-                      onBlur={(event) =>
-                        updateInspiration(item.id, {
-                          tags: event.target.value
-                            .split(",")
-                            .map((tag) => tag.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                      placeholder="标签，逗号分隔"
                     />
                     <div className="mt-auto space-y-2 border-t border-line/80 pt-3">
                       <div className="flex items-center justify-between gap-2">
