@@ -113,7 +113,7 @@ function MainTopNav() {
     <header className="sticky top-0 z-40 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <Link href="/app/home" className="font-display text-2xl font-extrabold text-ink">
-          Joey 的个人主场
+          Joey&apos;s personal domain ♡
         </Link>
         <nav className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="个人主场导航">
           {mainNav.map((item) => {
