@@ -139,14 +139,14 @@ export default function SettingsPage() {
     }
     const exportedAt = new Date().toISOString();
     const payload = {
-      app: "workplace-english-system",
+      app: "personal-domain",
       version: 1,
       exported_at: exportedAt,
       user_id: user.id,
       settings: settingsResult.data,
       tables,
     };
-    downloadFile(`workplace-english-backup-${todayKey()}.json`, JSON.stringify(payload, null, 2), "application/json");
+    downloadFile(`personal-domain-backup-${todayKey()}.json`, JSON.stringify(payload, null, 2), "application/json");
     await supabase.from("user_settings").update({ last_export_at: exportedAt }).eq("user_id", user.id);
     setBusy(false);
     toast({ title: "JSON 已导出", tone: "success" });
