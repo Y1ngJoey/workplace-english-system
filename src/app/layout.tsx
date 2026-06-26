@@ -4,8 +4,8 @@ import { AuthProvider } from "@/components/auth-provider";
 import { ToastProvider } from "@/components/toast-provider";
 
 export const metadata: Metadata = {
-  title: "外贸英语工作台",
-  description: "私人的外贸英语练习与复盘工作台",
+  title: "Joey's personal domain",
+  description: "Joey 的个人主场",
 };
 
 export default function RootLayout({

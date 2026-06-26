@@ -27,12 +27,29 @@ import type { JazzCompare, JazzInspiration, JazzTimeline, Visibility } from "@/l
 import { cn } from "@/lib/utils";
 
 type JazzTab = "timeline" | "compare" | "inspiration";
+type BusyAction = JazzTab | "goal" | null;
 
 const tabs: Array<{ id: JazzTab; label: string; icon: typeof Music2 }> = [
   { id: "timeline", label: "成长时间线", icon: CalendarDays },
   { id: "compare", label: "前后对比", icon: Video },
   { id: "inspiration", label: "灵感收藏夹", icon: Heart },
 ];
+
+function sortTimelineRows(rows: JazzTimeline[]) {
+  return [...rows].sort(
+    (a, b) =>
+      b.entry_date.localeCompare(a.entry_date) ||
+      a.position - b.position ||
+      (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+  );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+  return error instanceof Error ? error.message : "请稍后再试一次。";
+}
 
 function VisibilityButton({
   value,
@@ -92,7 +109,7 @@ export default function JazzPage() {
   const [compare, setCompare] = useState<JazzCompare[]>([]);
   const [inspiration, setInspiration] = useState<JazzInspiration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<BusyAction>(null);
 
   const load = useCallback(async () => {
     if (!supabase || !user) return;
@@ -116,7 +133,7 @@ export default function JazzPage() {
     if (error) {
       toast({ title: "爵士档案读取失败", description: error.message, tone: "error" });
     } else {
-      setTimeline((timelineResult.data ?? []) as JazzTimeline[]);
+      setTimeline(sortTimelineRows((timelineResult.data ?? []) as JazzTimeline[]));
       setCompare((compareResult.data ?? []) as JazzCompare[]);
       setInspiration((inspirationResult.data ?? []) as JazzInspiration[]);
     }
@@ -163,55 +180,85 @@ export default function JazzPage() {
   }
 
   async function addTimeline() {
-    if (!supabase || !user) return;
-    setBusy(true);
-    const { error } = await supabase.from("jazz_timeline").insert({
-      user_id: user.id,
-      entry_date: todayKey(),
-      title: "新的爵士记录",
-      note: "今天想记录的是...",
-      visibility: "private",
-      position: nextTimelinePosition,
-    });
-    setBusy(false);
-    if (error) {
-      toast({ title: "新增时间线失败", description: error.message, tone: "error" });
+    if (!supabase || !user) {
+      toast({ title: "新增失败", description: "请先登录后再记录爵士档案。", tone: "error" });
       return;
     }
-    await load();
+    setBusyAction("timeline");
+    try {
+      const { data, error } = await supabase
+        .from("jazz_timeline")
+        .insert({
+          user_id: user.id,
+          entry_date: todayKey(),
+          title: "新的爵士记录",
+          note: "今天想记录的是...",
+          visibility: "private",
+          position: nextTimelinePosition,
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      setTimeline((current) => sortTimelineRows([data as JazzTimeline, ...current]));
+      toast({ title: "已新增爵士记录", tone: "success" });
+    } catch (error) {
+      toast({ title: "新增时间线失败", description: getErrorMessage(error), tone: "error" });
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   async function addCompare() {
-    if (!supabase || !user) return;
-    setBusy(true);
-    const { error } = await supabase.from("jazz_compare").insert({
-      user_id: user.id,
-      title: "新的前后对比",
-      visibility: "private",
-    });
-    setBusy(false);
-    if (error) {
-      toast({ title: "新增对比失败", description: error.message, tone: "error" });
+    if (!supabase || !user) {
+      toast({ title: "新增失败", description: "请先登录后再记录爵士档案。", tone: "error" });
       return;
     }
-    await load();
+    setBusyAction("compare");
+    try {
+      const { data, error } = await supabase
+        .from("jazz_compare")
+        .insert({
+          user_id: user.id,
+          title: "新的前后对比",
+          visibility: "private",
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      setCompare((current) => [data as JazzCompare, ...current]);
+      toast({ title: "已新增前后对比", tone: "success" });
+    } catch (error) {
+      toast({ title: "新增对比失败", description: getErrorMessage(error), tone: "error" });
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   async function addInspiration() {
-    if (!supabase || !user) return;
-    setBusy(true);
-    const { error } = await supabase.from("jazz_inspiration").insert({
-      user_id: user.id,
-      note: "想学这个感觉",
-      tags: ["jazz"],
-      visibility: "private",
-    });
-    setBusy(false);
-    if (error) {
-      toast({ title: "新增灵感失败", description: error.message, tone: "error" });
+    if (!supabase || !user) {
+      toast({ title: "新增失败", description: "请先登录后再记录爵士档案。", tone: "error" });
       return;
     }
-    await load();
+    setBusyAction("inspiration");
+    try {
+      const { data, error } = await supabase
+        .from("jazz_inspiration")
+        .insert({
+          user_id: user.id,
+          note: "想学这个感觉",
+          tags: ["jazz"],
+          visibility: "private",
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      setInspiration((current) => [data as JazzInspiration, ...current]);
+      toast({ title: "已收藏爵士灵感", tone: "success" });
+    } catch (error) {
+      toast({ title: "新增灵感失败", description: getErrorMessage(error), tone: "error" });
+    } finally {
+      setBusyAction(null);
+    }
   }
 
   async function deleteRow(table: "jazz_timeline" | "jazz_compare" | "jazz_inspiration", id: string) {
@@ -240,22 +287,30 @@ export default function JazzPage() {
 
   async function setAsGoal(item: JazzInspiration) {
     if (!supabase || !user) return;
-    const { error } = await supabase.from("jazz_timeline").insert({
-      user_id: user.id,
-      entry_date: todayKey(),
-      title: "目标：" + (item.note || "新的爵士目标").slice(0, 24),
-      note: `来自灵感收藏夹：${item.note}`,
-      video_url: item.video_url,
-      visibility: item.visibility,
-      position: nextTimelinePosition,
-    });
-    if (error) {
-      toast({ title: "设为目标失败", description: error.message, tone: "error" });
-      return;
+    setBusyAction("goal");
+    try {
+      const { data, error } = await supabase
+        .from("jazz_timeline")
+        .insert({
+          user_id: user.id,
+          entry_date: todayKey(),
+          title: "目标：" + (item.note || "新的爵士目标").slice(0, 24),
+          note: `来自灵感收藏夹：${item.note}`,
+          video_url: item.video_url,
+          visibility: item.visibility,
+          position: nextTimelinePosition,
+        })
+        .select("*")
+        .single();
+      if (error) throw error;
+      setTimeline((current) => sortTimelineRows([data as JazzTimeline, ...current]));
+      toast({ title: "已写入成长时间线", tone: "success" });
+      setActiveTab("timeline");
+    } catch (error) {
+      toast({ title: "设为目标失败", description: getErrorMessage(error), tone: "error" });
+    } finally {
+      setBusyAction(null);
     }
-    toast({ title: "已写入成长时间线", tone: "success" });
-    setActiveTab("timeline");
-    await load();
   }
 
   if (loading) {
@@ -301,13 +356,13 @@ export default function JazzPage() {
       {activeTab === "timeline" ? (
         <section className="space-y-4">
           <div className="flex justify-end">
-            <Button variant="pink" onClick={addTimeline} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <Button variant="pink" onClick={addTimeline} disabled={busyAction === "timeline"}>
+              {busyAction === "timeline" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               记一笔
             </Button>
           </div>
           {timeline.length === 0 ? (
-            <EmptyJazzCard title="还没有时间线记录" action="记一笔" onClick={addTimeline} />
+            <EmptyJazzCard title="还没有时间线记录" action="记一笔" onClick={addTimeline} busy={busyAction === "timeline"} />
           ) : (
             <div className="space-y-4">
               {timeline.map((item, index) => (
@@ -370,13 +425,13 @@ export default function JazzPage() {
       {activeTab === "compare" ? (
         <section className="space-y-4">
           <div className="flex justify-end">
-            <Button variant="pink" onClick={addCompare} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <Button variant="pink" onClick={addCompare} disabled={busyAction === "compare"}>
+              {busyAction === "compare" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               加一组
             </Button>
           </div>
           {compare.length === 0 ? (
-            <EmptyJazzCard title="还没有前后对比" action="加一组" onClick={addCompare} />
+            <EmptyJazzCard title="还没有前后对比" action="加一组" onClick={addCompare} busy={busyAction === "compare"} />
           ) : (
             <div className="grid gap-4">
               {compare.map((item) => (
@@ -427,13 +482,18 @@ export default function JazzPage() {
       {activeTab === "inspiration" ? (
         <section className="space-y-4">
           <div className="flex justify-end">
-            <Button variant="pink" onClick={addInspiration} disabled={busy}>
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <Button variant="pink" onClick={addInspiration} disabled={busyAction === "inspiration"}>
+              {busyAction === "inspiration" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               收藏灵感
             </Button>
           </div>
           {inspiration.length === 0 ? (
-            <EmptyJazzCard title="还没有灵感收藏" action="收藏灵感" onClick={addInspiration} />
+            <EmptyJazzCard
+              title="还没有灵感收藏"
+              action="收藏灵感"
+              onClick={addInspiration}
+              busy={busyAction === "inspiration"}
+            />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
               {inspiration.map((item) => (
@@ -479,8 +539,8 @@ export default function JazzPage() {
                       }
                       placeholder="标签，逗号分隔"
                     />
-                    <Button variant="softBlue" onClick={() => setAsGoal(item)}>
-                      <Goal className="h-4 w-4" />
+                    <Button variant="softBlue" onClick={() => setAsGoal(item)} disabled={busyAction === "goal"}>
+                      {busyAction === "goal" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Goal className="h-4 w-4" />}
                       设为目标
                     </Button>
                   </CardContent>
@@ -494,13 +554,23 @@ export default function JazzPage() {
   );
 }
 
-function EmptyJazzCard({ title, action, onClick }: { title: string; action: string; onClick: () => void }) {
+function EmptyJazzCard({
+  title,
+  action,
+  onClick,
+  busy = false,
+}: {
+  title: string;
+  action: string;
+  onClick: () => void;
+  busy?: boolean;
+}) {
   return (
     <Card className="border-grape-line bg-grape-soft/35">
       <CardContent className="p-8 text-center">
         <CardTitle>{title}</CardTitle>
-        <Button className="mt-5" onClick={onClick}>
-          <Plus className="h-4 w-4" />
+        <Button className="mt-5" onClick={onClick} disabled={busy}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           {action}
         </Button>
       </CardContent>
