@@ -8,10 +8,11 @@ type VideoPreviewProps = {
   url: string | null | undefined;
   label?: string;
   orientation?: "landscape" | "portrait";
+  showLabel?: boolean;
   className?: string;
 };
 
-export function VideoPreview({ url, label, orientation = "landscape", className }: VideoPreviewProps) {
+export function VideoPreview({ url, label, orientation = "landscape", showLabel = true, className }: VideoPreviewProps) {
   const video = parseVideoUrl(url);
   const frameClassName = orientation === "portrait" ? "aspect-[9/16]" : "aspect-video";
   const compact = orientation === "portrait";
@@ -26,7 +27,7 @@ export function VideoPreview({ url, label, orientation = "landscape", className 
           className,
         )}
       >
-        {label ? `${label}：` : null}粘贴视频链接后显示预览
+        {label && showLabel ? `${label}：` : null}粘贴视频链接后显示预览
       </div>
     );
   }
@@ -44,11 +45,14 @@ export function VideoPreview({ url, label, orientation = "landscape", className 
           className={cn(
             "pointer-events-none absolute left-3 right-3 top-3 z-10 flex items-center justify-between gap-2 text-xs font-bold",
             compact ? "text-white" : "text-ink-2",
+            !showLabel && "justify-end",
           )}
         >
-          <span className={cn("truncate rounded-pill px-3 py-1", compact ? "bg-black/45" : "bg-white/90")}>
-            {label ?? video.platform}
-          </span>
+          {showLabel ? (
+            <span className={cn("truncate rounded-pill px-3 py-1", compact ? "bg-black/45" : "bg-white/90")}>
+              {label ?? video.platform}
+            </span>
+          ) : null}
           <Badge tone={video.platform === "Bilibili" ? "pink" : "blue"}>{video.platform}</Badge>
         </div>
         <div className={cn(frameClassName, compact ? "h-full" : "")}>

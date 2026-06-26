@@ -381,10 +381,17 @@ export default function JazzPage() {
               {timeline.map((item, index) => (
                 <Card key={item.id} className="overflow-hidden border-grape-line/70 bg-white/90">
                   <CardContent className="flex h-full flex-col gap-3 p-3">
+                    <EditableText
+                      aria-label="时间线标题"
+                      value={item.title}
+                      onSave={(value) => updateTimeline(item.id, { title: value || "未命名记录" })}
+                      inputClassName="font-display text-lg font-extrabold leading-tight text-ink"
+                    />
                     <VideoPreview
                       url={item.video_url}
-                      label={item.title || "时间线视频"}
+                      label="时间线视频"
                       orientation="portrait"
+                      showLabel={false}
                       className="shadow-milk"
                     />
                     <VideoUrlInput
@@ -392,12 +399,6 @@ export default function JazzPage() {
                       placeholder="粘贴视频链接"
                       inputClassName="h-10 rounded-pill px-3 text-xs"
                       onSave={(value) => updateTimeline(item.id, { video_url: value || null })}
-                    />
-                    <EditableText
-                      aria-label="时间线标题"
-                      value={item.title}
-                      onSave={(value) => updateTimeline(item.id, { title: value || "未命名记录" })}
-                      inputClassName="font-display text-lg font-extrabold leading-tight text-ink"
                     />
                     <EditableText
                       aria-label="时间线正文"
