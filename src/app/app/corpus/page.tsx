@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Check, Edit3, Loader2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { ArrowRight, Check, Edit3, FilePlus2, Loader2, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { CorpusEntryDialog, DEFAULT_SCENARIOS } from "@/components/corpus-entry-dialog";
 import { useCorpusDialog } from "@/components/corpus-dialog-context";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { DETAILS_CORPUS_ENTRIES, DETAILS_CORPUS_SOURCE } from "@/lib/details-corpus";
 import { supabase } from "@/lib/supabase";
 import type { CorpusEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ export default function CorpusPage() {
   const [query, setQuery] = useState("");
   const [scenario, setScenario] = useState("全部");
   const [editingEntry, setEditingEntry] = useState<CorpusEntry | null>(null);
+  const [importingDetails, setImportingDetails] = useState(false);
 
   const load = useCallback(async () => {
     if (!supabase || !user) {
@@ -145,16 +147,76 @@ export default function CorpusPage() {
     toast({ title: "已转为选题", description: "数据已写入 idea_bank，Phase 2 选题灵感页会读取它。", tone: "success" });
   }
 
+  async function importDetailsCorpus() {
+    if (!supabase || !user) {
+      return;
+    }
+
+    setImportingDetails(true);
+    const { data: existingRows, error: existingError } = await supabase
+      .from("corpus_entries")
+      .select("english_expression")
+      .eq("user_id", user.id)
+      .eq("source", DETAILS_CORPUS_SOURCE);
+
+    if (existingError) {
+      setImportingDetails(false);
+      toast({ title: "读取已导入句型失败", description: existingError.message, tone: "error" });
+      return;
+    }
+
+    const existingExpressions = new Set((existingRows ?? []).map((row) => row.english_expression));
+    const rowsToInsert = DETAILS_CORPUS_ENTRIES.filter(
+      (entry) => !existingExpressions.has(entry.english_expression),
+    ).map((entry) => ({
+      user_id: user.id,
+      scenario: entry.scenario,
+      chinese_intent: entry.chinese_intent,
+      english_expression: entry.english_expression,
+      mistake_note: entry.mistake_note ?? null,
+      tags: entry.tags,
+      source: DETAILS_CORPUS_SOURCE,
+      mastery: 0,
+    }));
+
+    if (rowsToInsert.length === 0) {
+      setImportingDetails(false);
+      toast({ title: "已经导入过啦", description: "PDF Details 模板句型没有新增项。", tone: "info" });
+      return;
+    }
+
+    const { error } = await supabase.from("corpus_entries").insert(rowsToInsert);
+    setImportingDetails(false);
+
+    if (error) {
+      toast({ title: "导入失败", description: error.message, tone: "error" });
+      return;
+    }
+
+    toast({
+      title: "模板句型已进语料库",
+      description: `新增 ${rowsToInsert.length} 条 PDF Details 句型。`,
+      tone: "success",
+    });
+    await load();
+  }
+
   return (
     <div>
       <PageHeading
         title="语料库"
         description="把真实工作里的表达沉淀下来，按场景和掌握度慢慢磨熟。"
         action={
-          <Button onClick={openCreateDialog}>
-            <Plus className="h-4 w-4" />
-            新增语料
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="softBlue" onClick={importDetailsCorpus} disabled={importingDetails}>
+              {importingDetails ? <Loader2 className="h-4 w-4 animate-spin" /> : <FilePlus2 className="h-4 w-4" />}
+              导入Details句型
+            </Button>
+            <Button onClick={openCreateDialog}>
+              <Plus className="h-4 w-4" />
+              新增语料
+            </Button>
+          </div>
         }
       />
 
