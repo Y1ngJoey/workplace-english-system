@@ -51,32 +51,40 @@ function formatTimelineLabel(value: string) {
 }
 
 function makeTimelineCurvePath(height: number, count: number) {
-  const itemCount = Math.max(count, 2);
-  const startY = 42;
-  const endY = height - 42;
-  const step = (endY - startY) / (itemCount - 1);
-  const parts = [`M 380,${startY}`];
+  const points = Array.from({ length: Math.max(count, 1) }, (_, index) => {
+    const point = getTimelinePoint(index, Math.max(count, 1), height);
+    return {
+      x: index % 2 === 0 ? 470 : 290,
+      y: Number.parseFloat(point.y),
+    };
+  });
+  const start = { x: 380, y: 70 };
+  const end = { x: 380, y: height - 70 };
+  const parts = [`M ${start.x},${start.y}`];
+  let previous = start;
 
-  for (let index = 0; index < itemCount; index += 1) {
-    const x = index % 2 === 0 ? 470 : 290;
-    const y = startY + step * index;
-    const previousY = index === 0 ? startY : startY + step * (index - 1);
-    parts.push(`C 380,${previousY + step * 0.38} ${x},${y - step * 0.38} ${x},${y}`);
+  for (const point of points) {
+    const midY = previous.y + (point.y - previous.y) * 0.5;
+    parts.push(`C ${previous.x},${midY} ${point.x},${midY} ${point.x},${point.y}`);
+    previous = point;
   }
 
-  parts.push(`C 380,${endY - 20} 395,${endY - 8} 380,${endY}`);
+  const midY = previous.y + (end.y - previous.y) * 0.5;
+  parts.push(`C ${previous.x},${midY} ${end.x},${midY} ${end.x},${end.y}`);
   return parts.join(" ");
 }
 
 function getTimelinePoint(index: number, count: number, height: number) {
   const itemCount = Math.max(count, 1);
-  const y = itemCount === 1 ? height / 2 : 82 + (index / (itemCount - 1)) * (height - 164);
+  const margin = itemCount <= 2 ? height * 0.36 : height * 0.14;
+  const y = itemCount === 1 ? height / 2 : margin + (index / (itemCount - 1)) * (height - margin * 2);
   const right = index % 2 === 0;
 
   return {
-    cardLeft: right ? "62%" : "2%",
+    cardLeft: right ? "64%" : "2%",
     dotLeft: right ? "61.8%" : "38.2%",
     labelClassName: right ? "-translate-x-full -translate-y-1/2 -ml-3" : "translate-x-0 -translate-y-1/2 ml-3",
+    y: String(y),
     top: `${(y / height) * 100}%`,
   };
 }
@@ -257,7 +265,7 @@ function TimelineCard({
     <Card
       className={cn(
         "overflow-hidden border-grape-line/70 bg-white/95 shadow-milk",
-        point ? "absolute w-[36%] -translate-y-1/2" : "border-l-4 border-l-grape",
+        point ? "absolute w-[34%] -translate-y-1/2" : "border-l-4 border-l-grape",
       )}
       style={point ? { left: point.cardLeft, top: point.top } : undefined}
     >
@@ -309,7 +317,6 @@ function TimelineCard({
           aria-label="时间线笔记"
           value={item.note}
           onSave={(value) => onUpdate(item.id, { note: value })}
-          multiline
           inputClassName="text-xs leading-5 text-ink-2"
         />
 
@@ -395,7 +402,7 @@ export default function JazzPage() {
     () => (timeline.length ? Math.max(...timeline.map((item) => item.position)) + 1 : 0),
     [timeline],
   );
-  const timelineCurveHeight = useMemo(() => Math.max(860, timeline.length * 360), [timeline.length]);
+  const timelineCurveHeight = useMemo(() => Math.max(1120, timeline.length * 520 + 240), [timeline.length]);
   const timelineCurvePath = useMemo(
     () => makeTimelineCurvePath(timelineCurveHeight, timeline.length),
     [timelineCurveHeight, timeline.length],
