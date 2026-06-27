@@ -46,7 +46,7 @@ function PhotoTile({
 }) {
   const emoji = isEmojiPhoto(item.url) ? getEmojiPhoto(item.url) : null;
   return (
-    <div className="group relative h-full min-w-full snap-center overflow-hidden rounded-[20px] border border-line bg-line-2">
+    <div className="group relative h-full min-w-full snap-center overflow-hidden rounded-[11px] border border-line bg-line-2">
       <button type="button" className="h-full w-full" onClick={() => onOpen(index)} aria-label="打开照片灯箱">
         {emoji ? (
           <span className="grid h-full w-full place-items-center bg-gradient-to-br from-[#FAEDE2] to-mint-soft text-6xl">
@@ -73,12 +73,14 @@ function PhotoStrip({
   photos,
   placeName,
   label,
+  single,
   onSaveLabel,
   onDeleteMedia,
 }: {
   photos: TravelPlaceMedia[];
   placeName: string;
   label: string;
+  single: boolean;
   onSaveLabel: (value: string) => Promise<void>;
   onDeleteMedia: (mediaId: string) => Promise<void>;
 }) {
@@ -96,7 +98,7 @@ function PhotoStrip({
         />
         <span>{photos.length}</span>
       </div>
-      <div className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto rounded-[20px] bg-line-2 shadow-sm">
+      <div className={`flex snap-x snap-mandatory overflow-x-auto rounded-[11px] bg-line-2 ${single ? "aspect-[16/10] max-h-[208px]" : "aspect-[4/3]"}`}>
         {photos.map((photo, index) => (
           <PhotoTile key={photo.id} item={photo} index={index} onOpen={setLightboxIndex} onDelete={onDeleteMedia} />
         ))}
@@ -153,11 +155,13 @@ function PhotoStrip({
 function VideoStrip({
   videos,
   label,
+  single,
   onSaveLabel,
   onDeleteMedia,
 }: {
   videos: TravelPlaceMedia[];
   label: string;
+  single: boolean;
   onSaveLabel: (value: string) => Promise<void>;
   onDeleteMedia: (mediaId: string) => Promise<void>;
 }) {
@@ -172,10 +176,10 @@ function VideoStrip({
         />
         <span>{videos.length}</span>
       </div>
-      <div className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto rounded-[20px] bg-line-2 shadow-sm">
+      <div className={`flex snap-x snap-mandatory overflow-x-auto rounded-[11px] bg-line-2 ${single ? "aspect-[16/10] max-h-[208px]" : "aspect-[4/3]"}`}>
         {videos.map((video) => (
-          <div key={video.id} className="group relative min-w-full snap-center overflow-hidden rounded-[20px]">
-            <VideoPreview url={video.url} label={video.platform ?? "视频"} orientation="portrait" showLabel className="h-full rounded-[20px]" />
+          <div key={video.id} className="group relative min-w-full snap-center overflow-hidden rounded-[11px]">
+            <VideoPreview url={video.url} label={video.platform ?? "视频"} orientation="landscape" showLabel className="h-full rounded-[11px]" />
             <button
               type="button"
               className="absolute right-2 top-12 hidden h-8 w-8 place-items-center rounded-full bg-white/92 text-[#B75B4F] shadow-sm group-hover:grid"
@@ -208,6 +212,7 @@ export function TravelMedia({
   const [uploading, setUploading] = useState(false);
   const hasPhotos = photos.length > 0;
   const hasVideos = videos.length > 0;
+  const singleMedia = !(hasPhotos && hasVideos);
 
   const layoutClassName = useMemo(() => {
     if (hasPhotos && hasVideos) return "grid gap-3 sm:grid-cols-2";
@@ -248,6 +253,7 @@ export function TravelMedia({
               photos={photos}
               placeName={placeName}
               label={texts.travel_media_photo_label}
+              single={singleMedia}
               onSaveLabel={(value) => onSaveText("travel_media_photo_label", value)}
               onDeleteMedia={onDeleteMedia}
             />
@@ -256,13 +262,14 @@ export function TravelMedia({
             <VideoStrip
               videos={videos}
               label={texts.travel_media_video_label}
+              single={singleMedia}
               onSaveLabel={(value) => onSaveText("travel_media_video_label", value)}
               onDeleteMedia={onDeleteMedia}
             />
           ) : null}
         </div>
       ) : (
-        <div className="grid aspect-[4/3] place-items-center rounded-[20px] border border-dashed border-line bg-line-2/50 text-center text-xs font-extrabold text-slate">
+        <div className="grid aspect-[16/10] max-h-[208px] place-items-center rounded-[11px] border border-dashed border-line bg-line-2/50 text-center text-xs font-extrabold text-slate">
           <EditableText
             aria-label="媒体空状态"
             value={texts.travel_media_empty}
@@ -272,33 +279,38 @@ export function TravelMedia({
         </div>
       )}
 
-      <div className="grid gap-2 border-t border-line/80 pt-3">
-        <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-pill border border-mint-line bg-mint-soft px-4 text-xs font-extrabold text-mint-deep hover:bg-white">
-          <ImagePlus className="h-4 w-4" />
-          {uploading ? texts.travel_media_uploading : texts.travel_media_add_photo}
-          <input className="sr-only" type="file" accept="image/*" multiple onChange={uploadPhotos} disabled={uploading} />
-        </label>
-        <div className="flex gap-2">
-          <Input
-            value={videoDraft}
-            onChange={(event) => setVideoDraft(event.target.value)}
-            placeholder={texts.travel_media_video_placeholder}
-            className="h-10 rounded-pill px-3 text-xs"
-          />
-          <Button variant="softPink" size="icon" className="h-10 w-10" onClick={copyVideoUrl} disabled={!videoDraft.trim()} aria-label="复制视频网址">
-            <Copy className="h-4 w-4" />
-          </Button>
-          <Button variant="pink" size="icon" className="h-10 w-10" onClick={addVideo} disabled={!videoDraft.trim() || savingVideo} aria-label="新增视频">
-            <Plus className="h-4 w-4" />
-          </Button>
+      <details className="border-t border-line/80 pt-2">
+        <summary className="cursor-pointer list-none rounded-pill px-2 py-1 text-[11px] font-extrabold text-mint-deep hover:bg-mint-soft">
+          {texts.travel_media_add_photo} / 视频链接
+        </summary>
+        <div className="mt-2 grid gap-2">
+          <label className="inline-flex min-h-8 cursor-pointer items-center justify-center gap-2 rounded-pill border border-mint-line bg-mint-soft px-3 text-[11px] font-extrabold text-mint-deep hover:bg-white">
+            <ImagePlus className="h-3.5 w-3.5" />
+            {uploading ? texts.travel_media_uploading : texts.travel_media_add_photo}
+            <input className="sr-only" type="file" accept="image/*" multiple onChange={uploadPhotos} disabled={uploading} />
+          </label>
+          <div className="flex gap-2">
+            <Input
+              value={videoDraft}
+              onChange={(event) => setVideoDraft(event.target.value)}
+              placeholder={texts.travel_media_video_placeholder}
+              className="h-8 rounded-pill px-3 text-[11px]"
+            />
+            <Button variant="softPink" size="icon" className="h-8 w-8" onClick={copyVideoUrl} disabled={!videoDraft.trim()} aria-label="复制视频网址">
+              <Copy className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="pink" size="icon" className="h-8 w-8" onClick={addVideo} disabled={!videoDraft.trim() || savingVideo} aria-label="新增视频">
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          {videoDraft.trim() ? (
+            <p className="px-2 text-[11px] font-bold text-slate">
+              {texts.travel_media_detected}
+              {getMediaPlatform(videoDraft)}
+            </p>
+          ) : null}
         </div>
-        {videoDraft.trim() ? (
-          <p className="px-2 text-[11px] font-bold text-slate">
-            {texts.travel_media_detected}
-            {getMediaPlatform(videoDraft)}
-          </p>
-        ) : null}
-      </div>
+      </details>
     </div>
   );
 }

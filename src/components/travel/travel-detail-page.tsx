@@ -165,8 +165,8 @@ function PlaceCard({
   const meta = travelTypeMeta[place.type_color] ?? travelTypeMeta.see;
 
   return (
-    <Card className="travel-card overflow-hidden rounded-[24px] border-line bg-white/95 shadow-milk" data-travel-card>
-      <CardContent className="space-y-4 p-4">
+    <Card className="travel-card overflow-hidden rounded-[15px] border-line bg-white/95 shadow-milk" data-travel-card>
+      <CardContent className="space-y-3 p-3.5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <span className={cn("h-5 w-1.5 shrink-0 rounded-full", meta.barClassName)} />
@@ -215,13 +215,13 @@ function PlaceCard({
           aria-label="地点名"
           value={place.name}
           onSave={(value) => onUpdate(place.id, { name: value || "未命名地点" })}
-          inputClassName="font-display text-xl font-extrabold leading-tight text-ink"
+          inputClassName="font-display text-base font-extrabold leading-tight text-ink"
         />
         <EditableText
           aria-label="地点地址"
           value={place.address ?? ""}
           onSave={(value) => onUpdate(place.id, { address: value || null })}
-          inputClassName="text-sm font-bold text-slate"
+          inputClassName="text-[11.5px] font-bold text-ink-2"
           placeholder="📍 地址"
         />
         <EditableText
@@ -229,7 +229,7 @@ function PlaceCard({
           value={place.mood ?? ""}
           multiline
           onSave={(value) => onUpdate(place.id, { mood: value || null })}
-          inputClassName="min-h-24 text-sm leading-7 text-ink-2"
+          inputClassName="min-h-20 rounded-[11px] bg-line-2 px-3 py-2 text-xs italic leading-6 text-ink-2"
           placeholder="今天在这里的心情..."
         />
 
@@ -256,7 +256,7 @@ function DayColumn({
   return (
     <div
       className={cn(
-        "travel-daycol space-y-2 text-sm font-extrabold",
+        "travel-daycol space-y-1 pt-[11px] text-sm font-extrabold",
         align === "right" ? "text-right" : "text-left",
       )}
       data-travel-day
@@ -265,13 +265,13 @@ function DayColumn({
         aria-label="Day 标签"
         value={place.day_label}
         onSave={(value) => onUpdate(place.id, { day_label: value || "Day" })}
-        inputClassName={cn("h-9 rounded-pill bg-white/80 px-3 text-xs text-mint-deep", align === "right" && "text-right")}
+        inputClassName={cn("h-7 rounded-md bg-transparent px-1 font-display text-[15px] font-extrabold leading-none text-ink", align === "right" && "text-right")}
       />
       <EditableText
         aria-label="日期标签"
         value={place.date_label}
         onSave={(value) => onUpdate(place.id, { date_label: value })}
-        inputClassName={cn("h-9 rounded-pill bg-white/80 px-3 text-xs text-slate", align === "right" && "text-right")}
+        inputClassName={cn("h-7 rounded-md bg-transparent px-1 text-[11px] font-extrabold text-slate", align === "right" && "text-right")}
         placeholder="10.18"
       />
     </div>
@@ -642,7 +642,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-[1100px] space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="ghost" asChild>
           <Link href="/app/travel">
@@ -659,7 +659,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
         </Button>
       </div>
 
-      <section className="rounded-[28px] border border-line bg-gradient-to-br from-white via-[#FCF6F4] to-mint-soft/50 px-6 py-7 shadow-milk">
+      <section className="pt-2">
         <EditableText
           aria-label="旅行详情小标签"
           value={texts.travel_detail_badge}
@@ -672,14 +672,14 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
               aria-label="旅程标题"
               value={trip.title}
               onSave={(value) => updateTrip({ title: value || "未命名旅行" })}
-              inputClassName="font-display text-[clamp(2rem,6vw,4.4rem)] font-extrabold leading-tight text-ink"
+              inputClassName="font-display text-[clamp(1.5rem,3.3vw,2.125rem)] font-extrabold leading-tight text-ink"
             />
             <EditableText
               aria-label="旅程简介"
               value={trip.intro ?? ""}
               multiline
               onSave={(value) => updateTrip({ intro: value || null })}
-              inputClassName="mt-2 text-base font-semibold leading-8 text-ink-2"
+              inputClassName="mt-2 max-w-[580px] text-xs italic leading-6 text-ink-2"
               placeholder="一条时间线从中间一路往下，左右交替记下每一天去了哪。"
             />
           </div>
@@ -718,7 +718,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
         </div>
       </section>
 
-      <section ref={timelineRef} className="relative overflow-hidden rounded-[28px] border border-line bg-white/75 px-4 py-6 shadow-milk sm:px-6 lg:px-8">
+      <section ref={timelineRef} className="relative mx-auto max-w-[900px] overflow-visible pt-2">
         {places.length === 0 ? (
           <div className="grid min-h-72 place-items-center text-center">
             <div>
@@ -784,8 +784,8 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                 const side = index % 2 === 0 ? "left" : "right";
                 const meta = travelTypeMeta[place.type_color] ?? travelTypeMeta.see;
                 const rowClassName = narrow
-                  ? "grid grid-cols-[58px_minmax(0,1fr)] gap-x-5 py-8"
-                  : "grid grid-cols-[minmax(0,1fr)_76px_minmax(0,1fr)] items-center gap-x-8 py-10";
+                  ? "mb-[30px] grid grid-cols-[50px_minmax(0,1fr)] items-start gap-x-[13px]"
+                  : "mb-[30px] grid grid-cols-2 items-start gap-x-16";
 
                 return (
                   <div
@@ -821,13 +821,11 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                           onDeleteMedia={deleteMedia}
                           onDelete={deletePlace}
                         />
-                        <span />
                         <DayColumn place={place} align="left" onUpdate={updatePlace} />
                       </>
                     ) : (
                       <>
                         <DayColumn place={place} align="right" onUpdate={updatePlace} />
-                        <span />
                         <PlaceCard
                           place={place}
                           texts={texts}
@@ -848,7 +846,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                 data-travel-row
                 data-side={places.length % 2 === 0 ? "left" : "right"}
                 data-color="#A8D8C0"
-                className={narrow ? "grid grid-cols-[58px_minmax(0,1fr)] gap-x-5 py-8" : "grid grid-cols-[minmax(0,1fr)_76px_minmax(0,1fr)] items-center gap-x-8 py-10"}
+                className={narrow ? "mb-[30px] grid grid-cols-[50px_minmax(0,1fr)] items-start gap-x-[13px]" : "mb-[30px] grid grid-cols-2 items-start gap-x-16"}
               >
                 {narrow ? (
                   <>
@@ -860,7 +858,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                     </div>
                     <button
                       type="button"
-                      className="travel-card grid min-h-48 place-items-center rounded-[24px] border border-dashed border-mint-line bg-mint-soft/40 p-6 text-center"
+                      className="travel-card grid min-h-40 place-items-center rounded-[15px] border border-dashed border-mint-line bg-white p-6 text-center hover:bg-mint-soft"
                       data-travel-card
                       onClick={() => setDialogOpen(true)}
                     >
@@ -872,14 +870,13 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                   <>
                     <button
                       type="button"
-                      className="travel-card grid min-h-48 place-items-center rounded-[24px] border border-dashed border-mint-line bg-mint-soft/40 p-6 text-center"
+                      className="travel-card grid min-h-40 place-items-center rounded-[15px] border border-dashed border-mint-line bg-white p-6 text-center hover:bg-mint-soft"
                       data-travel-card
                       onClick={() => setDialogOpen(true)}
                     >
                       <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
                       <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
                     </button>
-                    <span />
                     <div className="travel-daycol" data-travel-day>
                       <span className="block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-mint-deep">＋</span>
                       <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">
@@ -895,10 +892,9 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                         {texts.travel_add_card_date}
                       </span>
                     </div>
-                    <span />
                     <button
                       type="button"
-                      className="travel-card grid min-h-48 place-items-center rounded-[24px] border border-dashed border-mint-line bg-mint-soft/40 p-6 text-center"
+                      className="travel-card grid min-h-40 place-items-center rounded-[15px] border border-dashed border-mint-line bg-white p-6 text-center hover:bg-mint-soft"
                       data-travel-card
                       onClick={() => setDialogOpen(true)}
                     >
