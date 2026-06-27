@@ -205,7 +205,7 @@ export function TravelGlobe({ className }: { className?: string }) {
   }, []);
 
   return (
-    <div className={cn("relative mx-auto h-[min(70vw,360px)] w-[min(70vw,360px)] lg:mx-0", className)}>
+    <div className={cn("relative mx-auto h-[clamp(196px,23vw,256px)] w-[clamp(196px,23vw,256px)] lg:mx-0", className)}>
       <div className="absolute inset-[8%] rounded-full bg-mint/25 blur-3xl" />
       <div className="absolute inset-[8%] rounded-full border border-dashed border-mint-line" />
       <div className="absolute inset-[1%] rotate-[-18deg] rounded-full border border-dashed border-pink-line" />

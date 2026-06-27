@@ -545,6 +545,11 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
     await load();
   }
 
+  function openPlaceDialog() {
+    setForm({ ...emptyPlaceForm, day_label: nextDayLabel, date_label: todayKey().slice(5).replace("-", ".") });
+    setDialogOpen(true);
+  }
+
   async function savePlace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase || !user || !trip) return;
@@ -641,22 +646,15 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
     );
   }
 
+  const addCardHintLines = texts.travel_add_card_hint.split("｜");
+
   return (
-    <div className="mx-auto max-w-[1100px] space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button variant="ghost" asChild>
-          <Link href="/app/travel">
-            <ArrowLeft className="h-4 w-4" />
-            {texts.travel_detail_back}
-          </Link>
-        </Button>
-        <Button variant="pink" onClick={() => {
-          setForm({ ...emptyPlaceForm, day_label: nextDayLabel, date_label: todayKey().slice(5).replace("-", ".") });
-          setDialogOpen(true);
-        }}>
-          <Plus className="h-4 w-4" />
-          {texts.travel_add_place}
-        </Button>
+    <div className="mx-auto max-w-[1100px] px-[18px] sm:px-[38px]">
+      <div className="pt-3.5">
+        <Link href="/app/travel" className="inline-flex items-center gap-1.5 text-[13px] font-bold text-ink-2 hover:text-ink">
+          <ArrowLeft className="h-4 w-4" />
+          {texts.travel_detail_back}
+        </Link>
       </div>
 
       <section className="pt-2">
@@ -664,61 +662,67 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
           aria-label="旅行详情小标签"
           value={texts.travel_detail_badge}
           onSave={(value) => saveText("travel_detail_badge", value)}
-          inputClassName="inline-flex w-auto rounded-pill bg-white/80 px-4 py-1.5 text-xs font-extrabold text-mint-deep shadow-sm"
+          inputClassName="inline-flex w-auto rounded-md bg-transparent px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.24em] text-mint-deep"
         />
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div className="max-w-2xl">
-            <EditableText
-              aria-label="旅程标题"
-              value={trip.title}
-              onSave={(value) => updateTrip({ title: value || "未命名旅行" })}
-              inputClassName="font-display text-[clamp(1.5rem,3.3vw,2.125rem)] font-extrabold leading-tight text-ink"
-            />
-            <EditableText
-              aria-label="旅程简介"
-              value={trip.intro ?? ""}
-              multiline
-              onSave={(value) => updateTrip({ intro: value || null })}
-              inputClassName="mt-2 max-w-[580px] text-xs italic leading-6 text-ink-2"
-              placeholder="一条时间线从中间一路往下，左右交替记下每一天去了哪。"
-            />
-          </div>
-          <div className="grid gap-2 text-xs font-extrabold sm:grid-cols-2 lg:w-72">
+        <div className="mt-2 flex flex-wrap items-baseline gap-3">
+          <EditableText
+            aria-label="旅程标题"
+            value={trip.title}
+            onSave={(value) => updateTrip({ title: value || "未命名旅行" })}
+            inputClassName="font-display text-[clamp(1.5rem,3.3vw,2.125rem)] font-extrabold leading-tight text-ink"
+          />
+          <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold">
             <Input
               type="date"
               value={trip.date_start ?? ""}
               onChange={(event) => updateTrip({ date_start: event.target.value || null })}
-              className="h-10 rounded-pill bg-white px-3 py-2 text-xs font-extrabold text-slate shadow-sm"
+              className="h-8 w-[8.25rem] rounded-pill border-line bg-white/75 px-2 py-1 text-xs font-extrabold text-slate shadow-none"
               aria-label="旅行开始日期"
             />
+            <span className="text-slate">-</span>
             <Input
               type="date"
               value={trip.date_end ?? ""}
               onChange={(event) => updateTrip({ date_end: event.target.value || null })}
-              className="h-10 rounded-pill bg-white px-3 py-2 text-xs font-extrabold text-slate shadow-sm"
+              className="h-8 w-[8.25rem] rounded-pill border-line bg-white/75 px-2 py-1 text-xs font-extrabold text-slate shadow-none"
               aria-label="旅行结束日期"
             />
-            <span className="flex items-center gap-1 rounded-pill bg-mint-soft px-2 py-1 text-mint-deep shadow-sm sm:col-span-2">
+            <span className="flex items-center gap-1 rounded-pill bg-mint-soft px-2 py-0.5 text-mint-deep">
               <EditableText
                 aria-label="旅行详情国旗"
                 value={trip.country_flag ?? ""}
                 onSave={(value) => updateTrip({ country_flag: value || null })}
-                inputClassName="h-8 w-12 rounded-pill px-1 text-center text-xs font-extrabold text-mint-deep"
+                inputClassName="h-6 w-8 rounded-pill px-1 text-center text-[11px] font-extrabold text-mint-deep"
                 placeholder="🇯🇵"
               />
               <EditableText
                 aria-label="旅行详情国家"
                 value={trip.country ?? ""}
                 onSave={(value) => updateTrip({ country: value || null })}
-                inputClassName="h-8 rounded-pill px-2 text-xs font-extrabold text-mint-deep"
+                inputClassName="h-6 rounded-pill px-1.5 text-[11px] font-extrabold text-mint-deep"
                 placeholder="国家未定"
               />
             </span>
           </div>
         </div>
+        <EditableText
+          aria-label="旅程简介"
+          value={trip.intro ?? ""}
+          multiline
+          onSave={(value) => updateTrip({ intro: value || null })}
+          inputClassName="mt-1.5 inline-block max-w-[580px] rounded-md bg-transparent px-1.5 py-0.5 text-[12.5px] italic leading-6 text-ink-2"
+          placeholder="一条时间线从中间一路往下，左右交替记下每一天去了哪。"
+        />
+        <br />
+        <EditableText
+          aria-label="旅行详情滚动提示"
+          value={texts.travel_detail_hint}
+          onSave={(value) => saveText("travel_detail_hint", value)}
+          inputClassName="mt-1 inline-block rounded-md bg-transparent px-1.5 py-0.5 text-[11px] font-semibold text-slate"
+        />
       </section>
 
-      <section ref={timelineRef} className="relative mx-auto max-w-[900px] overflow-visible pt-2">
+      <section ref={timelineRef} className="relative mx-auto mt-6 max-w-[900px] overflow-visible">
         {places.length === 0 ? (
           <div className="grid min-h-72 place-items-center text-center">
             <div>
@@ -735,7 +739,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                 onSave={(value) => saveText("travel_empty_places_desc", value)}
                 inputClassName="mt-2 text-sm font-semibold text-slate"
               />
-              <Button className="mt-5" onClick={() => setDialogOpen(true)}>
+              <Button className="mt-5" onClick={openPlaceDialog}>
                 <Plus className="h-4 w-4" />
                 {texts.travel_add_place}
               </Button>
@@ -858,24 +862,38 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                     </div>
                     <button
                       type="button"
-                      className="travel-card grid min-h-40 place-items-center rounded-[15px] border border-dashed border-mint-line bg-white p-6 text-center hover:bg-mint-soft"
+                      className="travel-card flex min-h-40 flex-col items-center justify-center gap-1.5 rounded-[15px] border-[1.5px] border-dashed border-mint-line bg-white px-4 py-6 text-center hover:bg-mint-soft"
                       data-travel-card
-                      onClick={() => setDialogOpen(true)}
+                      onClick={openPlaceDialog}
                     >
-                      <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
+                      <span className="font-display text-3xl font-extrabold text-mint-deep">＋</span>
+                      <span className="text-[13px] font-extrabold text-mint-deep">{texts.travel_add_place}</span>
+                      <span className="text-[10.5px] leading-5 text-slate">
+                        {addCardHintLines.map((line) => (
+                          <span key={line} className="block">
+                            {line}
+                          </span>
+                        ))}
+                      </span>
                     </button>
                   </>
                 ) : places.length % 2 === 0 ? (
                   <>
                     <button
                       type="button"
-                      className="travel-card grid min-h-40 place-items-center rounded-[15px] border border-dashed border-mint-line bg-white p-6 text-center hover:bg-mint-soft"
+                      className="travel-card flex min-h-40 flex-col items-center justify-center gap-1.5 rounded-[15px] border-[1.5px] border-dashed border-mint-line bg-white px-4 py-6 text-center hover:bg-mint-soft"
                       data-travel-card
-                      onClick={() => setDialogOpen(true)}
+                      onClick={openPlaceDialog}
                     >
-                      <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
+                      <span className="font-display text-3xl font-extrabold text-mint-deep">＋</span>
+                      <span className="text-[13px] font-extrabold text-mint-deep">{texts.travel_add_place}</span>
+                      <span className="text-[10.5px] leading-5 text-slate">
+                        {addCardHintLines.map((line) => (
+                          <span key={line} className="block">
+                            {line}
+                          </span>
+                        ))}
+                      </span>
                     </button>
                     <div className="travel-daycol" data-travel-day>
                       <span className="block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-mint-deep">＋</span>
@@ -894,12 +912,19 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                     </div>
                     <button
                       type="button"
-                      className="travel-card grid min-h-40 place-items-center rounded-[15px] border border-dashed border-mint-line bg-white p-6 text-center hover:bg-mint-soft"
+                      className="travel-card flex min-h-40 flex-col items-center justify-center gap-1.5 rounded-[15px] border-[1.5px] border-dashed border-mint-line bg-white px-4 py-6 text-center hover:bg-mint-soft"
                       data-travel-card
-                      onClick={() => setDialogOpen(true)}
+                      onClick={openPlaceDialog}
                     >
-                      <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
+                      <span className="font-display text-3xl font-extrabold text-mint-deep">＋</span>
+                      <span className="text-[13px] font-extrabold text-mint-deep">{texts.travel_add_place}</span>
+                      <span className="text-[10.5px] leading-5 text-slate">
+                        {addCardHintLines.map((line) => (
+                          <span key={line} className="block">
+                            {line}
+                          </span>
+                        ))}
+                      </span>
                     </button>
                   </>
                 )}
@@ -908,6 +933,15 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
           </div>
         )}
       </section>
+
+      <footer className="py-5 text-center">
+        <EditableText
+          aria-label="旅行详情底部说明"
+          value={texts.travel_detail_footer}
+          onSave={(value) => saveText("travel_detail_footer", value)}
+          inputClassName="inline-block rounded-md bg-transparent px-1.5 py-0.5 text-[11.5px] font-bold text-mint-deep"
+        />
+      </footer>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>

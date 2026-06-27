@@ -179,7 +179,7 @@ function VideoStrip({
       <div className={`flex snap-x snap-mandatory overflow-x-auto rounded-[11px] bg-line-2 ${single ? "aspect-[16/10] max-h-[208px]" : "aspect-[4/3]"}`}>
         {videos.map((video) => (
           <div key={video.id} className="group relative min-w-full snap-center overflow-hidden rounded-[11px]">
-            <VideoPreview url={video.url} label={video.platform ?? "视频"} orientation="landscape" showLabel className="h-full rounded-[11px]" />
+            <VideoPreview url={video.url} label={video.platform ?? "视频"} orientation="landscape" showLabel fill className="h-full rounded-[11px]" />
             <button
               type="button"
               className="absolute right-2 top-12 hidden h-8 w-8 place-items-center rounded-full bg-white/92 text-[#B75B4F] shadow-sm group-hover:grid"

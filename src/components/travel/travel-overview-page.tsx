@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, CalendarDays, Loader2, MapPin, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Plus } from "lucide-react";
 import { EditableText } from "@/components/editable-text";
 import { TravelGlobe } from "@/components/travel/travel-globe";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -122,8 +121,8 @@ function FilterChip({
     <button
       type="button"
       className={cn(
-        "inline-flex min-h-10 shrink-0 items-center rounded-pill border px-4 text-sm font-extrabold transition",
-        active ? "border-mint-line bg-mint-soft text-mint-deep" : "border-line bg-white text-ink-2 hover:bg-mint-soft",
+        "inline-flex shrink-0 items-center rounded-pill border px-3.5 py-1.5 text-xs font-bold transition",
+        active ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-white/55 text-ink-2 hover:border-mint",
       )}
       onClick={onClick}
     >
@@ -143,9 +142,9 @@ function FootprintTile({ trip, label }: { trip: TravelTripWithPlaces; label: str
   ];
 
   return (
-    <div className="min-w-[160px]">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-[22px] border border-mint-line bg-gradient-to-br from-mint-soft via-white to-blue-soft">
-        <span className="absolute left-4 top-4 rounded-pill bg-white/85 px-3 py-1 text-xs font-extrabold text-mint-deep">
+    <div className="w-[156px] shrink-0 snap-start max-sm:w-[132px]">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-[13px] border border-line bg-white">
+        <span className="absolute left-2 top-2 rounded-pill bg-white/85 px-2 py-0.5 text-[9px] font-extrabold text-mint-deep">
           🐾 足迹
         </span>
         <svg className="absolute inset-x-4 bottom-4 top-10 h-[calc(100%-3.5rem)] w-[calc(100%-2rem)]" viewBox="0 0 156 208" aria-hidden="true">
@@ -160,9 +159,9 @@ function FootprintTile({ trip, label }: { trip: TravelTripWithPlaces; label: str
           ))}
         </svg>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-sm font-extrabold text-ink">
-        <span className="h-4 w-1.5 rounded-full bg-mint" />
-        {label}
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className="h-3 w-0.5 rounded-full bg-mint-deep" />
+        <span className="text-[11.5px] font-bold text-ink-2">{label}</span>
       </div>
     </div>
   );
@@ -178,21 +177,21 @@ function CategoryTile({
   const meta = travelTypeMeta[type];
   const count = places.reduce((total, place) => total + place.media.filter((item) => item.kind === "photo").length, 0);
   return (
-    <div className="min-w-[160px]">
+    <div className="w-[156px] shrink-0 snap-start max-sm:w-[132px]">
       <div
         className={cn(
-          "relative grid aspect-[3/4] place-items-center overflow-hidden rounded-[22px] border text-center shadow-sm",
+          "relative grid aspect-[3/4] place-items-center overflow-hidden rounded-[13px] border text-center",
           meta.softClassName,
         )}
       >
-        <span className="text-5xl">{meta.icon}</span>
-        <span className="absolute right-3 top-3 rounded-pill bg-white/86 px-3 py-1 text-xs font-extrabold">
+        <span className="text-3xl opacity-60">{meta.icon}</span>
+        <span className="absolute bottom-2 right-2 rounded-pill bg-white/85 px-2 py-0.5 text-[8.5px] font-extrabold text-ink-2">
           {count || places.length} 条
         </span>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-sm font-extrabold text-ink">
-        <span className={cn("h-4 w-1.5 rounded-full", meta.barClassName)} />
-        {meta.label}
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className={cn("h-3 w-0.5 rounded-full", meta.barClassName)} />
+        <span className="text-[11.5px] font-bold text-ink-2">{meta.label}</span>
       </div>
     </div>
   );
@@ -216,65 +215,56 @@ function TripRail({
   const visibleTypes = (Object.keys(byType) as Array<keyof typeof byType>).filter((type) => byType[type].length > 0);
 
   return (
-    <Card className="overflow-hidden rounded-[26px] border-line bg-white/88">
-      <CardContent className="p-5">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+    <div className="border-b border-line py-5">
+      <div className="mb-3 flex items-baseline gap-3">
+        <div className="min-w-0">
+          <EditableText
+            aria-label="旅行卡片标题"
+            value={trip.title}
+            onSave={(value) => onUpdate(trip.id, { title: value || "未命名旅行" })}
+            inputClassName="font-display text-xl font-bold text-ink"
+          />
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <span className="text-xs text-slate">{formatTripRange(trip)}</span>
+          <span className="flex items-center gap-1 rounded-pill bg-mint-soft px-2 py-0.5 text-mint-deep">
             <EditableText
-              aria-label="旅行卡片标题"
-              value={trip.title}
-              onSave={(value) => onUpdate(trip.id, { title: value || "未命名旅行" })}
-              inputClassName="font-display text-2xl font-extrabold text-ink"
+              aria-label="旅行国旗"
+              value={trip.country_flag ?? ""}
+              onSave={(value) => onUpdate(trip.id, { country_flag: value || null })}
+              inputClassName="h-6 w-8 rounded-pill px-1 text-center text-[11px] font-extrabold text-mint-deep"
+              placeholder="🇯🇵"
             />
-            <div className="mt-2 flex flex-wrap gap-2 text-xs font-extrabold text-slate">
-              <span className="rounded-pill bg-line-2 px-3 py-1">{formatTripRange(trip)}</span>
-              <span className="flex items-center gap-1 rounded-pill bg-mint-soft px-2 py-1 text-mint-deep">
-                <EditableText
-                  aria-label="旅行国旗"
-                  value={trip.country_flag ?? ""}
-                  onSave={(value) => onUpdate(trip.id, { country_flag: value || null })}
-                  inputClassName="h-6 w-10 rounded-pill px-1 text-center text-xs font-extrabold text-mint-deep"
-                  placeholder="🇯🇵"
-                />
-                <EditableText
-                  aria-label="旅行国家"
-                  value={trip.country ?? ""}
-                  onSave={(value) => onUpdate(trip.id, { country: value || null })}
-                  inputClassName="h-6 w-24 rounded-pill px-2 text-xs font-extrabold text-mint-deep"
-                  placeholder="国家未定"
-                />
-              </span>
-            </div>
-          </div>
-          <Button variant="softBlue" asChild>
-            <Link href={`/app/travel/${trip.id}`}>
-              {texts.travel_enter_detail}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+            <EditableText
+              aria-label="旅行国家"
+              value={trip.country ?? ""}
+              onSave={(value) => onUpdate(trip.id, { country: value || null })}
+              inputClassName="h-6 w-16 rounded-pill px-1.5 text-[11px] font-extrabold text-mint-deep"
+              placeholder="国家未定"
+            />
+          </span>
         </div>
-        <EditableText
-          aria-label="旅行卡片简介"
-          value={trip.intro ?? ""}
-          multiline
-          onSave={(value) => onUpdate(trip.id, { intro: value || null })}
-          inputClassName="mb-5 text-sm font-semibold leading-7 text-ink-2"
-          placeholder="写一句这趟旅行的感觉..."
-        />
+      </div>
 
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          <FootprintTile trip={trip} label={texts.travel_footprint_label} />
-          {visibleTypes.map((type) => (
-            <CategoryTile key={type} type={type} places={byType[type]} />
-          ))}
-          {visibleTypes.length === 0 ? (
-            <div className="grid min-w-[160px] place-items-center rounded-[22px] border border-dashed border-line bg-line-2/50 p-5 text-center text-sm font-bold text-slate">
-              {texts.travel_empty_tile}
-            </div>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex snap-x snap-mandatory gap-[13px] overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <FootprintTile trip={trip} label={texts.travel_footprint_label} />
+        {visibleTypes.map((type) => (
+          <CategoryTile key={type} type={type} places={byType[type]} />
+        ))}
+        {visibleTypes.length === 0 ? (
+          <div className="grid aspect-[3/4] w-[156px] shrink-0 place-items-center rounded-[13px] border border-dashed border-line bg-line-2/50 p-4 text-center text-xs font-bold text-slate">
+            {texts.travel_empty_tile}
+          </div>
+        ) : null}
+      </div>
+      <Link
+        href={`/app/travel/${trip.id}`}
+        className="mt-3 flex w-full items-center justify-center gap-1 rounded-[12px] border border-mint-line bg-mint-soft px-4 py-3 text-[13px] font-bold text-mint-deep transition hover:bg-[#DCEFE6]"
+      >
+        {texts.travel_enter_detail}
+        <ArrowRight className="h-4 w-4" />
+      </Link>
+    </div>
   );
 }
 
@@ -415,53 +405,82 @@ export function TravelOverviewPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <section className="grid min-h-[420px] items-center gap-8 rounded-[30px] border border-line bg-gradient-to-br from-[#FCEEF0] via-white to-blue-soft/70 px-6 py-8 shadow-milk lg:grid-cols-[1fr_360px] lg:px-10">
-        <div className="max-w-2xl">
+    <div className="mx-auto max-w-[1100px] px-[18px] sm:px-[38px]">
+      <section className="mb-2 flex flex-wrap items-start gap-[26px]">
+        <div className="flex min-w-[300px] flex-1 flex-col justify-center pt-[18px]">
           <EditableText
             aria-label="旅行页小标签"
             value={texts.travel_overview_badge}
             onSave={(value) => saveText("travel_overview_badge", value)}
-            inputClassName="inline-flex w-auto rounded-pill bg-white/70 px-4 py-1.5 text-xs font-extrabold text-mint-deep shadow-sm"
+            inputClassName="inline-flex w-auto rounded-md bg-transparent px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.24em] text-mint-deep"
           />
           <EditableText
             aria-label="旅行页标题"
             value={texts.travel_overview_title}
             onSave={(value) => saveText("travel_overview_title", value)}
-            inputClassName="mt-5 font-display text-[clamp(2.6rem,8vw,5.4rem)] font-extrabold leading-[0.98] text-ink"
+            inputClassName="mt-1 inline-block rounded-md bg-transparent px-1.5 py-0.5 font-display text-[clamp(2rem,4.6vw,3rem)] font-bold leading-tight text-ink"
           />
           <EditableText
             aria-label="旅行页介绍"
             value={texts.travel_overview_intro}
             onSave={(value) => saveText("travel_overview_intro", value)}
-            multiline
-            inputClassName="mt-5 max-w-xl text-lg font-semibold leading-9 text-ink-2"
+            inputClassName="mt-2 inline-block rounded-md bg-transparent px-1.5 py-0.5 text-[13.5px] text-ink-2"
           />
-          <div className="mt-6 grid max-w-md grid-cols-3 gap-3">
+          <div className="mt-3 flex flex-wrap gap-3.5">
             {stats.map((item) => (
-              <div key={item.label} className="rounded-[18px] border border-line bg-white/75 px-4 py-3 text-center shadow-sm">
-                <p className="font-display text-3xl font-extrabold text-ink">{item.value}</p>
-                <p className="mt-1 text-xs font-extrabold text-slate">{item.label}</p>
-              </div>
+              <span key={item.label} className="text-xs text-slate">
+                <b className="mr-1 font-display text-base font-bold text-ink">{item.value}</b>
+                {item.label}
+              </span>
             ))}
           </div>
         </div>
-        <TravelGlobe />
+        <div className="mt-[46px] flex min-w-[300px] flex-1 justify-start max-md:mt-4 max-md:justify-center">
+          <div className="flex w-[clamp(196px,23vw,256px)] flex-col items-center">
+            <TravelGlobe />
+            <div className="mt-3.5 flex items-center justify-center gap-1 text-[11px] font-bold text-ink-2">
+              <EditableText
+                aria-label="星球说明"
+                value={texts.travel_planet_caption}
+                onSave={(value) => saveText("travel_planet_caption", value)}
+                inputClassName="h-7 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
+              />
+              <EditableText
+                aria-label="星球提示"
+                value={texts.travel_planet_hint}
+                onSave={(value) => saveText("travel_planet_hint", value)}
+                inputClassName="h-7 rounded-md px-1 text-center text-[11px] font-semibold text-slate"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
+              {[
+                ["travel_legend_one", "#CC6E96"],
+                ["travel_legend_two", "#5C9F80"],
+                ["travel_legend_three", "#8E63B8"],
+              ].map(([slot, color]) => (
+                <span key={slot} className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-white px-2.5 py-1 text-[11px] font-bold text-ink-2">
+                  <i className="h-2 w-2 rounded-full" style={{ background: color }} />
+                  <EditableText
+                    aria-label="星球图例"
+                    value={texts[slot as TravelTextSlot]}
+                    onSave={(value) => saveText(slot as TravelTextSlot, value)}
+                    inputClassName="h-5 rounded-md px-1 text-[11px] font-bold text-ink-2"
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-extrabold text-ink">
-              <CalendarDays className="h-4 w-4 text-mint-deep" />
+      <section className="mt-3 border-b border-line pb-4">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
               <EditableText
                 aria-label="时间筛选标题"
                 value={texts.travel_filter_time}
                 onSave={(value) => saveText("travel_filter_time", value)}
-                inputClassName="h-8 rounded-pill px-2 text-sm font-extrabold text-ink"
+            inputClassName="h-7 rounded-md px-1 text-[11px] font-bold tracking-[0.08em] text-slate"
               />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
               <FilterChip active={filter.year === "all"} onClick={() => setFilter((current) => ({ ...current, year: "all" }))}>
                 {texts.travel_filter_all}
               </FilterChip>
@@ -470,19 +489,14 @@ export function TravelOverviewPage() {
                   {year}
                 </FilterChip>
               ))}
-            </div>
           </div>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-sm font-extrabold text-ink">
-              <MapPin className="h-4 w-4 text-pink-deep" />
+        <div className="mt-2 flex flex-wrap items-center gap-2">
               <EditableText
                 aria-label="国家筛选标题"
                 value={texts.travel_filter_country}
                 onSave={(value) => saveText("travel_filter_country", value)}
-                inputClassName="h-8 rounded-pill px-2 text-sm font-extrabold text-ink"
+            inputClassName="h-7 rounded-md px-1 text-[11px] font-bold tracking-[0.08em] text-slate"
               />
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
               <FilterChip active={filter.country === "all"} onClick={() => setFilter((current) => ({ ...current, country: "all" }))}>
                 {texts.travel_filter_all}
               </FilterChip>
@@ -491,25 +505,23 @@ export function TravelOverviewPage() {
                   {country}
                 </FilterChip>
               ))}
-            </div>
-          </div>
-          <Button variant="pink" onClick={() => setDialogOpen(true)}>
+          <Button variant="pink" size="sm" className="ml-auto" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" />
             {texts.travel_add_trip}
           </Button>
         </div>
+      </section>
 
+      <section>
         {filteredTrips.length > 0 ? (
-          <div className="space-y-5">
+          <div>
             {filteredTrips.map((trip) => (
               <TripRail key={trip.id} trip={trip} texts={texts} onUpdate={updateTrip} />
             ))}
           </div>
         ) : (
-          <Card className="border-mint-line bg-mint-soft/35">
-            <CardContent className="grid min-h-56 place-items-center p-8 text-center">
+          <div className="grid min-h-56 place-items-center border-b border-line py-8 text-center">
               <div>
-                <Sparkles className="mx-auto mb-3 h-8 w-8 text-mint-deep" />
                 <EditableText
                   aria-label="旅行空状态标题"
                   value={texts.travel_empty_title}
@@ -527,8 +539,7 @@ export function TravelOverviewPage() {
                   {texts.travel_add_trip}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+          </div>
         )}
       </section>
 

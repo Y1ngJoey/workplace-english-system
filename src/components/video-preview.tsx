@@ -10,11 +10,12 @@ type VideoPreviewProps = {
   orientation?: "landscape" | "portrait";
   showLabel?: boolean;
   className?: string;
+  fill?: boolean;
 };
 
-export function VideoPreview({ url, label, orientation = "landscape", showLabel = true, className }: VideoPreviewProps) {
+export function VideoPreview({ url, label, orientation = "landscape", showLabel = true, className, fill = false }: VideoPreviewProps) {
   const video = parseVideoUrl(url);
-  const frameClassName = orientation === "portrait" ? "aspect-[9/16]" : "aspect-video";
+  const frameClassName = orientation === "portrait" ? "aspect-[9/16]" : fill ? "h-full" : "aspect-video";
   const compact = orientation === "portrait";
 
   if (!video) {
