@@ -438,21 +438,23 @@ export function TravelOverviewPage() {
         <div className="mt-[46px] flex min-w-[300px] flex-1 justify-start max-md:mt-4 max-md:justify-center">
           <div className="flex w-[clamp(196px,23vw,256px)] flex-col items-center">
             <TravelGlobe />
-            <div className="mt-3.5 flex items-center justify-center gap-1 text-[11px] font-bold text-ink-2">
+            <div className="mt-3.5 flex items-center justify-center gap-1 whitespace-nowrap text-[11px] font-bold text-ink-2">
               <EditableText
                 aria-label="星球说明"
                 value={texts.travel_planet_caption}
                 onSave={(value) => saveText("travel_planet_caption", value)}
-                inputClassName="h-7 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
+                className="inline-block"
+                inputClassName="h-6 w-[7.5rem] rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
               />
               <EditableText
                 aria-label="星球提示"
                 value={texts.travel_planet_hint}
                 onSave={(value) => saveText("travel_planet_hint", value)}
-                inputClassName="h-7 rounded-md px-1 text-center text-[11px] font-semibold text-slate"
+                className="inline-block"
+                inputClassName="h-6 w-[5.5rem] rounded-md px-1 text-center text-[11px] font-semibold text-slate"
               />
             </div>
-            <div className="mt-2 flex flex-wrap justify-center gap-2">
+            <div className="mt-2 flex flex-nowrap justify-center gap-2">
               {[
                 ["travel_legend_one", "#CC6E96"],
                 ["travel_legend_two", "#5C9F80"],
@@ -464,7 +466,8 @@ export function TravelOverviewPage() {
                     aria-label="星球图例"
                     value={texts[slot as TravelTextSlot]}
                     onSave={(value) => saveText(slot as TravelTextSlot, value)}
-                    inputClassName="h-5 rounded-md px-1 text-[11px] font-bold text-ink-2"
+                    className="inline-block"
+                    inputClassName="h-5 w-10 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
                   />
                 </span>
               ))}

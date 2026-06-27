@@ -13,14 +13,15 @@ function createTexture(THREE: ThreeModule) {
   if (!context) return null;
 
   const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#E8F2FB");
-  gradient.addColorStop(1, "#E3F0F1");
+  gradient.addColorStop(0, "#FFFFFF");
+  gradient.addColorStop(0.55, "#F4FCFB");
+  gradient.addColorStop(1, "#EAF8F5");
   context.fillStyle = gradient;
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  context.fillStyle = "#CFE6D8";
-  context.strokeStyle = "#BCDAC7";
-  context.lineWidth = 3;
+  context.fillStyle = "rgba(207, 230, 216, 0.46)";
+  context.strokeStyle = "rgba(188, 218, 199, 0.5)";
+  context.lineWidth = 2;
   const blob = (cx: number, cy: number, rx: number, ry: number) => {
     context.beginPath();
     context.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
@@ -86,13 +87,13 @@ export function TravelGlobe({ className }: { className?: string }) {
         globe.add(
           new THREE.Mesh(
             new THREE.SphereGeometry(1, 64, 48),
-            new THREE.MeshPhongMaterial({ map: texture, shininess: 6, specular: 0x2a3a44 }),
+            new THREE.MeshBasicMaterial({ map: texture }),
           ),
         );
         scene.add(
           new THREE.Mesh(
             new THREE.SphereGeometry(1.05, 48, 32),
-            new THREE.MeshBasicMaterial({ color: 0xcde7f2, transparent: true, opacity: 0.16, side: THREE.BackSide }),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18, side: THREE.BackSide }),
           ),
         );
 
@@ -205,8 +206,8 @@ export function TravelGlobe({ className }: { className?: string }) {
   }, []);
 
   return (
-    <div className={cn("relative mx-auto h-[clamp(196px,23vw,256px)] w-[clamp(196px,23vw,256px)] lg:mx-0", className)}>
-      <div className="absolute inset-[8%] rounded-full bg-mint/25 blur-3xl" />
+    <div className={cn("relative mx-auto h-[256px] max-h-[70vw] w-[256px] max-w-[70vw] lg:mx-0", className)}>
+      <div className="absolute inset-[-14%] rounded-full bg-[radial-gradient(circle_at_50%_44%,rgba(168,216,192,0.4),rgba(144,189,223,0.16)_58%,rgba(195,164,221,0.06)_74%,transparent_80%)] blur-[3px]" />
       <div className="absolute inset-[8%] rounded-full border border-dashed border-mint-line" />
       <div className="absolute inset-[1%] rotate-[-18deg] rounded-full border border-dashed border-pink-line" />
       <div

@@ -110,9 +110,9 @@ function MainTopNav() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-paper/90 px-4 py-3 backdrop-blur lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <Link href="/app/home" className="font-display text-2xl font-extrabold text-ink">
+    <header className="sticky top-0 z-40 border-b border-line bg-[#FCF6F4]/88 px-4 py-1.5 backdrop-blur lg:px-8">
+      <div className="mx-auto flex max-w-7xl flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <Link href="/app/home" className="font-display text-[1.35rem] font-extrabold leading-none text-ink">
           Joey&apos;s personal domain ♡
         </Link>
         <nav className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="个人主场导航">
@@ -124,7 +124,7 @@ function MainTopNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-pill border px-4 text-sm font-extrabold transition",
+                  "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-pill border px-3 text-[13px] font-extrabold transition",
                   item.tone === "pink" &&
                     (active
                       ? "border-pink-line bg-pink-soft text-pink-deep"
@@ -143,7 +143,7 @@ function MainTopNav() {
                       : "border-transparent text-ink-2 hover:bg-blue-soft"),
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-3.5 w-3.5" />
                 {item.label}
               </Link>
             );
@@ -157,12 +157,15 @@ function MainTopNav() {
 function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const showEnglishShell = englishRoutes.has(pathname);
+  const showTravelShell = pathname.startsWith("/app/travel");
 
   if (!showEnglishShell) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[linear-gradient(180deg,#FCEEF0_0%,#FCF6F4_55%,#FBFAF8_100%)]">
         <MainTopNav />
-        <main className="mx-auto max-w-7xl px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        <main className={showTravelShell ? "min-w-0 py-0" : "mx-auto max-w-7xl px-4 py-4 lg:px-8 lg:py-6"}>
+          {children}
+        </main>
       </div>
     );
   }
