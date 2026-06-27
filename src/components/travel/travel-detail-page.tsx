@@ -24,11 +24,12 @@ import { todayKey } from "@/lib/dates";
 import { supabase } from "@/lib/supabase";
 import type { TravelMediaKind, TravelPlace, TravelPlaceMedia, TravelPlaceType, TravelTrip, Visibility } from "@/lib/types";
 import {
-  formatTripRange,
   getMediaPlatform,
   sortTravelPlaces,
   travelTypeMeta,
+  travelTextDefaults,
   travelTypeOptions,
+  type TravelTextSlot,
   type TravelPlaceWithMedia,
 } from "@/lib/travel";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,8 @@ type CurveState = {
   stems: Array<{ x1: number; y1: number; x2: number; y2: number }>;
   nodes: Array<{ x: number; y: number; color: string }>;
 };
+
+type TravelTextMap = Record<TravelTextSlot, string>;
 
 const emptyPlaceForm = {
   day_label: "Day 1",
@@ -54,10 +57,35 @@ const emptyPlaceForm = {
 };
 
 function getErrorMessage(error: unknown) {
-  if (error && typeof error === "object" && "message" in error) {
-    return String((error as { message: unknown }).message);
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: unknown }).message)
+      : error instanceof Error
+        ? error.message
+        : "";
+  if (message.includes("schema cache") || message.includes("relation") || message.includes("does not exist")) {
+    return `数据库还没建好旅行表。请先运行 supabase/travel-expansion.sql，然后刷新页面再试。原始错误：${message}`;
   }
-  return error instanceof Error ? error.message : "请稍后再试一次。";
+  if (message.includes("row-level security")) {
+    return `数据库权限没有通过。请确认已经运行 supabase/travel-expansion.sql，并重新登录后再试。原始错误：${message}`;
+  }
+  if (message) return message;
+  return "请稍后再试一次。";
+}
+
+function mergeTexts(rows: Array<{ slot: string; content: string }> | null | undefined) {
+  const nextTexts: TravelTextMap = { ...travelTextDefaults };
+  const slots = Object.keys(travelTextDefaults) as TravelTextSlot[];
+  for (const row of rows ?? []) {
+    if (slots.includes(row.slot as TravelTextSlot)) {
+      nextTexts[row.slot as TravelTextSlot] = row.content;
+    }
+  }
+  return nextTexts;
+}
+
+function getTextFallback(slot: TravelTextSlot) {
+  return travelTextDefaults[slot];
 }
 
 function groupPlaces(places: TravelPlace[], media: TravelPlaceMedia[]) {
@@ -115,6 +143,8 @@ function buildPath(lineX: number, height: number, nodes: CurveState["nodes"]) {
 
 function PlaceCard({
   place,
+  texts,
+  onSaveText,
   onUpdate,
   onAddVideo,
   onAddPhotos,
@@ -122,6 +152,8 @@ function PlaceCard({
   onDelete,
 }: {
   place: TravelPlaceWithMedia;
+  texts: TravelTextMap;
+  onSaveText: (slot: TravelTextSlot, content: string) => Promise<void>;
   onUpdate: (id: string, patch: Partial<TravelPlace>) => Promise<void>;
   onAddVideo: (place: TravelPlaceWithMedia, url: string) => Promise<void>;
   onAddPhotos: (place: TravelPlaceWithMedia, files: FileList) => Promise<void>;
@@ -172,6 +204,8 @@ function PlaceCard({
           placeName={place.name}
           photos={photos}
           videos={videos}
+          texts={texts}
+          onSaveText={onSaveText}
           onAddVideo={(url) => onAddVideo(place, url)}
           onAddPhotos={(files) => onAddPhotos(place, files)}
           onDeleteMedia={onDeleteMedia}
@@ -252,6 +286,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
   const curveFrameRef = useRef<number | null>(null);
   const [trip, setTrip] = useState<TravelTrip | null>(null);
   const [places, setPlaces] = useState<TravelPlaceWithMedia[]>([]);
+  const [texts, setTexts] = useState<TravelTextMap>(travelTextDefaults);
   const [loading, setLoading] = useState(true);
   const [curve, setCurve] = useState<CurveState | null>(null);
   const [narrow, setNarrow] = useState(false);
@@ -259,11 +294,12 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
   const [form, setForm] = useState(emptyPlaceForm);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [savingPlace, setSavingPlace] = useState(false);
+  const textSlots = useMemo(() => Object.keys(travelTextDefaults) as TravelTextSlot[], []);
 
   const load = useCallback(async () => {
     if (!supabase || !user) return;
     setLoading(true);
-    const [tripResult, placesResult] = await Promise.all([
+    const [tripResult, placesResult, textsResult] = await Promise.all([
       supabase.from("trips").select("*").eq("id", tripId).eq("user_id", user.id).maybeSingle(),
       supabase
         .from("places")
@@ -271,7 +307,12 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
         .eq("trip_id", tripId)
         .eq("user_id", user.id)
         .order("sort_order", { ascending: true }),
+      supabase.from("site_texts").select("slot, content").eq("user_id", user.id).in("slot", textSlots),
     ]);
+
+    if (!textsResult.error) {
+      setTexts(mergeTexts(textsResult.data));
+    }
 
     const error = tripResult.error || placesResult.error;
     if (error) {
@@ -300,7 +341,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
     setTrip((tripResult.data ?? null) as TravelTrip | null);
     setPlaces(groupPlaces(placeRows, mediaRows));
     setLoading(false);
-  }, [toast, tripId, user]);
+  }, [textSlots, toast, tripId, user]);
 
   const buildCurve = useCallback(() => {
     const rows = rowsRef.current;
@@ -394,6 +435,20 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
       await load();
     } else {
       toast({ title: "已保存", tone: "success" });
+    }
+  }
+
+  async function saveText(slot: TravelTextSlot, content: string) {
+    if (!supabase || !user) return;
+    const nextContent = content || getTextFallback(slot);
+    setTexts((current) => ({ ...current, [slot]: nextContent }));
+    const { error } = await supabase.from("site_texts").upsert(
+      { user_id: user.id, slot, content: nextContent, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,slot" },
+    );
+    if (error) {
+      toast({ title: "文案保存失败", description: error.message, tone: "error" });
+      await load();
     }
   }
 
@@ -592,7 +647,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
         <Button variant="ghost" asChild>
           <Link href="/app/travel">
             <ArrowLeft className="h-4 w-4" />
-            返回我的旅行
+            {texts.travel_detail_back}
           </Link>
         </Button>
         <Button variant="pink" onClick={() => {
@@ -600,14 +655,17 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
           setDialogOpen(true);
         }}>
           <Plus className="h-4 w-4" />
-          加一个地方
+          {texts.travel_add_place}
         </Button>
       </div>
 
       <section className="rounded-[28px] border border-line bg-gradient-to-br from-white via-[#FCF6F4] to-mint-soft/50 px-6 py-7 shadow-milk">
-        <span className="inline-flex rounded-pill bg-white/80 px-4 py-1.5 text-xs font-extrabold text-mint-deep shadow-sm">
-          travel journal
-        </span>
+        <EditableText
+          aria-label="旅行详情小标签"
+          value={texts.travel_detail_badge}
+          onSave={(value) => saveText("travel_detail_badge", value)}
+          inputClassName="inline-flex w-auto rounded-pill bg-white/80 px-4 py-1.5 text-xs font-extrabold text-mint-deep shadow-sm"
+        />
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
           <div className="max-w-2xl">
             <EditableText
@@ -625,11 +683,36 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
               placeholder="一条时间线从中间一路往下，左右交替记下每一天去了哪。"
             />
           </div>
-          <div className="flex flex-wrap gap-2 text-xs font-extrabold">
-            <span className="rounded-pill bg-white px-3 py-2 text-slate shadow-sm">{formatTripRange(trip)}</span>
-            <span className="rounded-pill bg-mint-soft px-3 py-2 text-mint-deep shadow-sm">
-              {trip.country_flag ? `${trip.country_flag} ` : ""}
-              {trip.country ?? "国家未定"}
+          <div className="grid gap-2 text-xs font-extrabold sm:grid-cols-2 lg:w-72">
+            <Input
+              type="date"
+              value={trip.date_start ?? ""}
+              onChange={(event) => updateTrip({ date_start: event.target.value || null })}
+              className="h-10 rounded-pill bg-white px-3 py-2 text-xs font-extrabold text-slate shadow-sm"
+              aria-label="旅行开始日期"
+            />
+            <Input
+              type="date"
+              value={trip.date_end ?? ""}
+              onChange={(event) => updateTrip({ date_end: event.target.value || null })}
+              className="h-10 rounded-pill bg-white px-3 py-2 text-xs font-extrabold text-slate shadow-sm"
+              aria-label="旅行结束日期"
+            />
+            <span className="flex items-center gap-1 rounded-pill bg-mint-soft px-2 py-1 text-mint-deep shadow-sm sm:col-span-2">
+              <EditableText
+                aria-label="旅行详情国旗"
+                value={trip.country_flag ?? ""}
+                onSave={(value) => updateTrip({ country_flag: value || null })}
+                inputClassName="h-8 w-12 rounded-pill px-1 text-center text-xs font-extrabold text-mint-deep"
+                placeholder="🇯🇵"
+              />
+              <EditableText
+                aria-label="旅行详情国家"
+                value={trip.country ?? ""}
+                onSave={(value) => updateTrip({ country: value || null })}
+                inputClassName="h-8 rounded-pill px-2 text-xs font-extrabold text-mint-deep"
+                placeholder="国家未定"
+              />
             </span>
           </div>
         </div>
@@ -640,11 +723,21 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
           <div className="grid min-h-72 place-items-center text-center">
             <div>
               <MapPin className="mx-auto mb-3 h-8 w-8 text-mint-deep" />
-              <h2 className="font-display text-2xl font-extrabold text-ink">还没有地点</h2>
-              <p className="mt-2 text-sm font-semibold text-slate">加第一个地点后，曲线时间线会自动长出来。</p>
+              <EditableText
+                aria-label="旅行详情空状态标题"
+                value={texts.travel_empty_places_title}
+                onSave={(value) => saveText("travel_empty_places_title", value)}
+                inputClassName="font-display text-2xl font-extrabold text-ink"
+              />
+              <EditableText
+                aria-label="旅行详情空状态描述"
+                value={texts.travel_empty_places_desc}
+                onSave={(value) => saveText("travel_empty_places_desc", value)}
+                inputClassName="mt-2 text-sm font-semibold text-slate"
+              />
               <Button className="mt-5" onClick={() => setDialogOpen(true)}>
                 <Plus className="h-4 w-4" />
-                加一个地方
+                {texts.travel_add_place}
               </Button>
             </div>
           </div>
@@ -707,6 +800,8 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                         <DayColumn place={place} align="right" onUpdate={updatePlace} />
                         <PlaceCard
                           place={place}
+                          texts={texts}
+                          onSaveText={saveText}
                           onUpdate={updatePlace}
                           onAddVideo={addVideo}
                           onAddPhotos={addPhotos}
@@ -718,6 +813,8 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                       <>
                         <PlaceCard
                           place={place}
+                          texts={texts}
+                          onSaveText={saveText}
                           onUpdate={updatePlace}
                           onAddVideo={addVideo}
                           onAddPhotos={addPhotos}
@@ -733,6 +830,8 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                         <span />
                         <PlaceCard
                           place={place}
+                          texts={texts}
+                          onSaveText={saveText}
                           onUpdate={updatePlace}
                           onAddVideo={addVideo}
                           onAddPhotos={addPhotos}
@@ -755,7 +854,9 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                   <>
                     <div className="travel-daycol text-right" data-travel-day>
                       <span className="block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">新地点</span>
+                      <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">
+                        {texts.travel_add_card_date}
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -764,7 +865,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                       onClick={() => setDialogOpen(true)}
                     >
                       <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block text-sm font-extrabold text-ink">加一个地方</span>
+                      <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
                     </button>
                   </>
                 ) : places.length % 2 === 0 ? (
@@ -776,19 +877,23 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                       onClick={() => setDialogOpen(true)}
                     >
                       <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block text-sm font-extrabold text-ink">加一个地方</span>
+                      <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
                     </button>
                     <span />
                     <div className="travel-daycol" data-travel-day>
                       <span className="block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">新地点</span>
+                      <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">
+                        {texts.travel_add_card_date}
+                      </span>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="travel-daycol text-right" data-travel-day>
                       <span className="block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">新地点</span>
+                      <span className="mt-2 block rounded-pill bg-white/80 px-3 py-2 text-xs font-extrabold text-slate">
+                        {texts.travel_add_card_date}
+                      </span>
                     </div>
                     <span />
                     <button
@@ -798,7 +903,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                       onClick={() => setDialogOpen(true)}
                     >
                       <span className="font-display text-4xl font-extrabold text-mint-deep">＋</span>
-                      <span className="mt-2 block text-sm font-extrabold text-ink">加一个地方</span>
+                      <span className="mt-2 block text-sm font-extrabold text-ink">{texts.travel_add_place}</span>
                     </button>
                   </>
                 )}
@@ -811,8 +916,22 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>加一个地方</DialogTitle>
-            <DialogDescription>照片会上传到 Supabase Storage，视频只保存外部链接。</DialogDescription>
+            <DialogTitle asChild>
+              <EditableText
+                aria-label="加地点弹窗标题"
+                value={texts.travel_place_dialog_title}
+                onSave={(value) => saveText("travel_place_dialog_title", value)}
+                inputClassName="font-display text-2xl font-extrabold text-ink"
+              />
+            </DialogTitle>
+            <DialogDescription asChild>
+              <EditableText
+                aria-label="加地点弹窗说明"
+                value={texts.travel_place_dialog_desc}
+                onSave={(value) => saveText("travel_place_dialog_desc", value)}
+                inputClassName="text-sm text-slate"
+              />
+            </DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={savePlace}>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -878,7 +997,7 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
             </div>
             <Button type="submit" disabled={savingPlace}>
               {savingPlace ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              保存地点
+              {texts.travel_place_dialog_save}
             </Button>
           </form>
         </DialogContent>

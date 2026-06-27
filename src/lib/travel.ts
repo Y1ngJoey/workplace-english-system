@@ -64,6 +64,45 @@ export const travelTypeOptions = Object.entries(travelTypeMeta).map(([value, met
   label: meta.label,
 }));
 
+export const travelTextDefaults = {
+  travel_overview_badge: "travel journal",
+  travel_overview_title: "我的旅行",
+  travel_overview_intro: "转一转我的足迹星球，再往下逛每一趟。城市、餐厅、地址和小心情都慢慢放进来。",
+  travel_stat_countries: "国家",
+  travel_stat_trips: "旅程",
+  travel_stat_places: "地点",
+  travel_filter_time: "时间",
+  travel_filter_country: "国家",
+  travel_filter_all: "全部",
+  travel_add_trip: "新增旅行",
+  travel_empty_title: "还没有旅行记录",
+  travel_empty_desc: "先加一趟旅行，再进去放地点、照片和视频。",
+  travel_enter_detail: "进入旅行详情",
+  travel_footprint_label: "足迹地图",
+  travel_empty_tile: "进入详情后加地点",
+  travel_trip_dialog_title: "新增旅行",
+  travel_trip_dialog_desc: "先建一趟旅程，进去后再加每天的地点、照片和视频。",
+  travel_trip_dialog_save: "保存旅行",
+  travel_detail_badge: "travel journal",
+  travel_detail_back: "返回我的旅行",
+  travel_add_place: "加一个地方",
+  travel_empty_places_title: "还没有地点",
+  travel_empty_places_desc: "加第一个地点后，曲线时间线会自动长出来。",
+  travel_add_card_date: "新地点",
+  travel_place_dialog_title: "加一个地方",
+  travel_place_dialog_desc: "照片会上传到 Supabase Storage，视频只保存外部链接。",
+  travel_place_dialog_save: "保存地点",
+  travel_media_photo_label: "📷 照片",
+  travel_media_video_label: "🎬 视频",
+  travel_media_empty: "加照片或视频后，这里会自动出现预览",
+  travel_media_add_photo: "加照片",
+  travel_media_uploading: "上传中...",
+  travel_media_video_placeholder: "粘贴 YouTube / B站 / 小红书视频链接",
+  travel_media_detected: "识别为：",
+} as const;
+
+export type TravelTextSlot = keyof typeof travelTextDefaults;
+
 export function sortTravelPlaces(places: TravelPlaceWithMedia[]) {
   return [...places].sort(
     (a, b) =>

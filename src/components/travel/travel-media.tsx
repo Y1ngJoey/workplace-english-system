@@ -2,18 +2,21 @@
 
 import { ChangeEvent, useMemo, useState } from "react";
 import { Copy, ImagePlus, Plus, Trash2, X } from "lucide-react";
+import { EditableText } from "@/components/editable-text";
 import { VideoPreview } from "@/components/video-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/toast-provider";
 import { getEmojiPhoto, getMediaPlatform, isEmojiPhoto } from "@/lib/travel";
 import type { TravelPlaceMedia } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import type { TravelTextSlot } from "@/lib/travel";
 
 type TravelMediaProps = {
   placeName: string;
   photos: TravelPlaceMedia[];
   videos: TravelPlaceMedia[];
+  texts: Record<TravelTextSlot, string>;
+  onSaveText: (slot: TravelTextSlot, content: string) => Promise<void>;
   onAddVideo: (url: string) => Promise<void>;
   onAddPhotos: (files: FileList) => Promise<void>;
   onDeleteMedia: (mediaId: string) => Promise<void>;
@@ -69,10 +72,14 @@ function PhotoTile({
 function PhotoStrip({
   photos,
   placeName,
+  label,
+  onSaveLabel,
   onDeleteMedia,
 }: {
   photos: TravelPlaceMedia[];
   placeName: string;
+  label: string;
+  onSaveLabel: (value: string) => Promise<void>;
   onDeleteMedia: (mediaId: string) => Promise<void>;
 }) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -81,7 +88,12 @@ function PhotoStrip({
   return (
     <div>
       <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-extrabold text-slate">
-        <span>📷 照片</span>
+        <EditableText
+          aria-label="照片区标题"
+          value={label}
+          onSave={onSaveLabel}
+          inputClassName="h-7 rounded-pill px-2 text-[11px] font-extrabold text-slate"
+        />
         <span>{photos.length}</span>
       </div>
       <div className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto rounded-[20px] bg-line-2 shadow-sm">
@@ -140,15 +152,24 @@ function PhotoStrip({
 
 function VideoStrip({
   videos,
+  label,
+  onSaveLabel,
   onDeleteMedia,
 }: {
   videos: TravelPlaceMedia[];
+  label: string;
+  onSaveLabel: (value: string) => Promise<void>;
   onDeleteMedia: (mediaId: string) => Promise<void>;
 }) {
   return (
     <div>
       <div className="mb-2 flex items-center justify-between px-1 text-[11px] font-extrabold text-slate">
-        <span>🎬 视频</span>
+        <EditableText
+          aria-label="视频区标题"
+          value={label}
+          onSave={onSaveLabel}
+          inputClassName="h-7 rounded-pill px-2 text-[11px] font-extrabold text-slate"
+        />
         <span>{videos.length}</span>
       </div>
       <div className="flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto rounded-[20px] bg-line-2 shadow-sm">
@@ -171,7 +192,16 @@ function VideoStrip({
   );
 }
 
-export function TravelMedia({ placeName, photos, videos, onAddVideo, onAddPhotos, onDeleteMedia }: TravelMediaProps) {
+export function TravelMedia({
+  placeName,
+  photos,
+  videos,
+  texts,
+  onSaveText,
+  onAddVideo,
+  onAddPhotos,
+  onDeleteMedia,
+}: TravelMediaProps) {
   const { toast } = useToast();
   const [videoDraft, setVideoDraft] = useState("");
   const [savingVideo, setSavingVideo] = useState(false);
@@ -213,26 +243,46 @@ export function TravelMedia({ placeName, photos, videos, onAddVideo, onAddPhotos
     <div className="space-y-3">
       {hasPhotos || hasVideos ? (
         <div className={layoutClassName}>
-          {hasPhotos ? <PhotoStrip photos={photos} placeName={placeName} onDeleteMedia={onDeleteMedia} /> : null}
-          {hasVideos ? <VideoStrip videos={videos} onDeleteMedia={onDeleteMedia} /> : null}
+          {hasPhotos ? (
+            <PhotoStrip
+              photos={photos}
+              placeName={placeName}
+              label={texts.travel_media_photo_label}
+              onSaveLabel={(value) => onSaveText("travel_media_photo_label", value)}
+              onDeleteMedia={onDeleteMedia}
+            />
+          ) : null}
+          {hasVideos ? (
+            <VideoStrip
+              videos={videos}
+              label={texts.travel_media_video_label}
+              onSaveLabel={(value) => onSaveText("travel_media_video_label", value)}
+              onDeleteMedia={onDeleteMedia}
+            />
+          ) : null}
         </div>
       ) : (
         <div className="grid aspect-[4/3] place-items-center rounded-[20px] border border-dashed border-line bg-line-2/50 text-center text-xs font-extrabold text-slate">
-          加照片或视频后，这里会自动出现预览
+          <EditableText
+            aria-label="媒体空状态"
+            value={texts.travel_media_empty}
+            onSave={(value) => onSaveText("travel_media_empty", value)}
+            inputClassName="text-center text-xs font-extrabold text-slate"
+          />
         </div>
       )}
 
       <div className="grid gap-2 border-t border-line/80 pt-3">
         <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-pill border border-mint-line bg-mint-soft px-4 text-xs font-extrabold text-mint-deep hover:bg-white">
           <ImagePlus className="h-4 w-4" />
-          {uploading ? "上传中..." : "加照片"}
+          {uploading ? texts.travel_media_uploading : texts.travel_media_add_photo}
           <input className="sr-only" type="file" accept="image/*" multiple onChange={uploadPhotos} disabled={uploading} />
         </label>
         <div className="flex gap-2">
           <Input
             value={videoDraft}
             onChange={(event) => setVideoDraft(event.target.value)}
-            placeholder="粘贴 YouTube / B站 / 小红书视频链接"
+            placeholder={texts.travel_media_video_placeholder}
             className="h-10 rounded-pill px-3 text-xs"
           />
           <Button variant="softPink" size="icon" className="h-10 w-10" onClick={copyVideoUrl} disabled={!videoDraft.trim()} aria-label="复制视频网址">
@@ -243,7 +293,10 @@ export function TravelMedia({ placeName, photos, videos, onAddVideo, onAddPhotos
           </Button>
         </div>
         {videoDraft.trim() ? (
-          <p className="px-2 text-[11px] font-bold text-slate">识别为：{getMediaPlatform(videoDraft)}</p>
+          <p className="px-2 text-[11px] font-bold text-slate">
+            {texts.travel_media_detected}
+            {getMediaPlatform(videoDraft)}
+          </p>
         ) : null}
       </div>
     </div>

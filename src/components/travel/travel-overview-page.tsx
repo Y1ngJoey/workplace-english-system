@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, CalendarDays, Loader2, MapPin, Plus, Sparkles } from "lucide-react";
+import { EditableText } from "@/components/editable-text";
 import { TravelGlobe } from "@/components/travel/travel-globe";
 import { useAuth } from "@/components/auth-provider";
 import { useToast } from "@/components/toast-provider";
@@ -26,6 +27,8 @@ import {
   sortTravelPlaces,
   sortTravelTrips,
   travelTypeMeta,
+  travelTextDefaults,
+  type TravelTextSlot,
   type TravelPlaceWithMedia,
   type TravelTripWithPlaces,
 } from "@/lib/travel";
@@ -35,6 +38,8 @@ type Filter = {
   year: string;
   country: string;
 };
+
+type TravelTextMap = Record<TravelTextSlot, string>;
 
 const emptyTripForm = {
   title: "",
@@ -73,10 +78,35 @@ function groupTrips(trips: TravelTrip[], places: TravelPlace[], media: TravelPla
 }
 
 function getErrorMessage(error: unknown) {
-  if (error && typeof error === "object" && "message" in error) {
-    return String((error as { message: unknown }).message);
+  const message =
+    error && typeof error === "object" && "message" in error
+      ? String((error as { message: unknown }).message)
+      : error instanceof Error
+        ? error.message
+        : "";
+  if (message.includes("schema cache") || message.includes("relation") || message.includes("does not exist")) {
+    return `数据库还没建好旅行表。请先运行 supabase/travel-expansion.sql，然后刷新页面再试。原始错误：${message}`;
   }
-  return error instanceof Error ? error.message : "请稍后再试一次。";
+  if (message.includes("row-level security")) {
+    return `数据库权限没有通过。请确认已经运行 supabase/travel-expansion.sql，并重新登录后再试。原始错误：${message}`;
+  }
+  if (message) return message;
+  return "请稍后再试一次。";
+}
+
+function mergeTexts(rows: Array<{ slot: string; content: string }> | null | undefined) {
+  const nextTexts: TravelTextMap = { ...travelTextDefaults };
+  const slots = Object.keys(travelTextDefaults) as TravelTextSlot[];
+  for (const row of rows ?? []) {
+    if (slots.includes(row.slot as TravelTextSlot)) {
+      nextTexts[row.slot as TravelTextSlot] = row.content;
+    }
+  }
+  return nextTexts;
+}
+
+function getTravelTextFallback(slot: TravelTextSlot) {
+  return travelTextDefaults[slot];
 }
 
 function FilterChip({
@@ -102,7 +132,7 @@ function FilterChip({
   );
 }
 
-function FootprintTile({ trip }: { trip: TravelTripWithPlaces }) {
+function FootprintTile({ trip, label }: { trip: TravelTripWithPlaces; label: string }) {
   const colors = trip.places.map((place) => travelTypeMeta[place.type_color]?.color ?? "#5C9F80").slice(0, 5);
   const points = [
     { x: 32, y: 62 },
@@ -132,7 +162,7 @@ function FootprintTile({ trip }: { trip: TravelTripWithPlaces }) {
       </div>
       <div className="mt-3 flex items-center gap-2 text-sm font-extrabold text-ink">
         <span className="h-4 w-1.5 rounded-full bg-mint" />
-        足迹地图
+        {label}
       </div>
     </div>
   );
@@ -168,7 +198,15 @@ function CategoryTile({
   );
 }
 
-function TripRail({ trip }: { trip: TravelTripWithPlaces }) {
+function TripRail({
+  trip,
+  texts,
+  onUpdate,
+}: {
+  trip: TravelTripWithPlaces;
+  texts: TravelTextMap;
+  onUpdate: (id: string, patch: Partial<TravelTrip>) => Promise<void>;
+}) {
   const byType = {
     stay: trip.places.filter((place) => place.type_color === "stay"),
     food: trip.places.filter((place) => place.type_color === "food"),
@@ -182,32 +220,56 @@ function TripRail({ trip }: { trip: TravelTripWithPlaces }) {
       <CardContent className="p-5">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="font-display text-2xl font-extrabold text-ink">{trip.title}</h2>
+            <EditableText
+              aria-label="旅行卡片标题"
+              value={trip.title}
+              onSave={(value) => onUpdate(trip.id, { title: value || "未命名旅行" })}
+              inputClassName="font-display text-2xl font-extrabold text-ink"
+            />
             <div className="mt-2 flex flex-wrap gap-2 text-xs font-extrabold text-slate">
               <span className="rounded-pill bg-line-2 px-3 py-1">{formatTripRange(trip)}</span>
-              <span className="rounded-pill bg-mint-soft px-3 py-1 text-mint-deep">
-                {trip.country_flag ? `${trip.country_flag} ` : ""}
-                {trip.country ?? "国家未定"}
+              <span className="flex items-center gap-1 rounded-pill bg-mint-soft px-2 py-1 text-mint-deep">
+                <EditableText
+                  aria-label="旅行国旗"
+                  value={trip.country_flag ?? ""}
+                  onSave={(value) => onUpdate(trip.id, { country_flag: value || null })}
+                  inputClassName="h-6 w-10 rounded-pill px-1 text-center text-xs font-extrabold text-mint-deep"
+                  placeholder="🇯🇵"
+                />
+                <EditableText
+                  aria-label="旅行国家"
+                  value={trip.country ?? ""}
+                  onSave={(value) => onUpdate(trip.id, { country: value || null })}
+                  inputClassName="h-6 w-24 rounded-pill px-2 text-xs font-extrabold text-mint-deep"
+                  placeholder="国家未定"
+                />
               </span>
             </div>
           </div>
           <Button variant="softBlue" asChild>
             <Link href={`/app/travel/${trip.id}`}>
-              进入旅行详情
+              {texts.travel_enter_detail}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>
-        {trip.intro ? <p className="mb-5 text-sm font-semibold leading-7 text-ink-2">{trip.intro}</p> : null}
+        <EditableText
+          aria-label="旅行卡片简介"
+          value={trip.intro ?? ""}
+          multiline
+          onSave={(value) => onUpdate(trip.id, { intro: value || null })}
+          inputClassName="mb-5 text-sm font-semibold leading-7 text-ink-2"
+          placeholder="写一句这趟旅行的感觉..."
+        />
 
         <div className="flex gap-4 overflow-x-auto pb-2">
-          <FootprintTile trip={trip} />
+          <FootprintTile trip={trip} label={texts.travel_footprint_label} />
           {visibleTypes.map((type) => (
             <CategoryTile key={type} type={type} places={byType[type]} />
           ))}
           {visibleTypes.length === 0 ? (
             <div className="grid min-w-[160px] place-items-center rounded-[22px] border border-dashed border-line bg-line-2/50 p-5 text-center text-sm font-bold text-slate">
-              进入详情后加地点
+              {texts.travel_empty_tile}
             </div>
           ) : null}
         </div>
@@ -220,22 +282,28 @@ export function TravelOverviewPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [trips, setTrips] = useState<TravelTripWithPlaces[]>([]);
+  const [texts, setTexts] = useState<TravelTextMap>(travelTextDefaults);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>({ year: "all", country: "all" });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyTripForm);
   const [saving, setSaving] = useState(false);
+  const textSlots = useMemo(() => Object.keys(travelTextDefaults) as TravelTextSlot[], []);
 
   const load = useCallback(async () => {
     if (!supabase || !user) return;
     setLoading(true);
-    const [tripsResult, placesResult, mediaResult] = await Promise.all([
+    const [tripsResult, placesResult, mediaResult, textsResult] = await Promise.all([
       supabase.from("trips").select("*").eq("user_id", user.id).order("sort_order", { ascending: true }).order("date_start", { ascending: false }),
       supabase.from("places").select("*").eq("user_id", user.id).order("sort_order", { ascending: true }),
       supabase.from("place_media").select("*").eq("user_id", user.id).order("sort_order", { ascending: true }),
+      supabase.from("site_texts").select("slot, content").eq("user_id", user.id).in("slot", textSlots),
     ]);
 
     const error = tripsResult.error || placesResult.error || mediaResult.error;
+    if (!textsResult.error) {
+      setTexts(mergeTexts(textsResult.data));
+    }
     if (error) {
       toast({
         title: "旅行数据读取失败",
@@ -246,7 +314,7 @@ export function TravelOverviewPage() {
       setTrips(groupTrips((tripsResult.data ?? []) as TravelTrip[], (placesResult.data ?? []) as TravelPlace[], (mediaResult.data ?? []) as TravelPlaceMedia[]));
     }
     setLoading(false);
-  }, [toast, user]);
+  }, [textSlots, toast, user]);
 
   useEffect(() => {
     void load();
@@ -270,15 +338,44 @@ export function TravelOverviewPage() {
     const countryCount = new Set(trips.map((trip) => trip.country).filter(Boolean)).size;
     const placeCount = trips.reduce((sum, trip) => sum + trip.places.length, 0);
     return [
-      { label: "国家", value: countryCount },
-      { label: "旅程", value: trips.length },
-      { label: "地点", value: placeCount },
+      { label: texts.travel_stat_countries, value: countryCount },
+      { label: texts.travel_stat_trips, value: trips.length },
+      { label: texts.travel_stat_places, value: placeCount },
     ];
-  }, [trips]);
+  }, [texts.travel_stat_countries, texts.travel_stat_places, texts.travel_stat_trips, trips]);
+
+  async function saveText(slot: TravelTextSlot, content: string) {
+    if (!supabase || !user) return;
+    const nextContent = content || getTravelTextFallback(slot);
+    setTexts((current) => ({ ...current, [slot]: nextContent }));
+    const { error } = await supabase.from("site_texts").upsert(
+      { user_id: user.id, slot, content: nextContent, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,slot" },
+    );
+    if (error) {
+      toast({ title: "文案保存失败", description: error.message, tone: "error" });
+      await load();
+    }
+  }
+
+  async function updateTrip(id: string, patch: Partial<TravelTrip>) {
+    if (!supabase) return;
+    setTrips((current) => current.map((trip) => (trip.id === id ? { ...trip, ...patch } : trip)));
+    const { error } = await supabase.from("trips").update(patch).eq("id", id);
+    if (error) {
+      toast({ title: "旅行保存失败", description: getErrorMessage(error), tone: "error" });
+      await load();
+    } else {
+      toast({ title: "已保存", tone: "success" });
+    }
+  }
 
   async function saveTrip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase || !user) return;
+    if (!supabase || !user) {
+      toast({ title: "新增旅行失败", description: "请先登录后再新增旅行。", tone: "error" });
+      return;
+    }
     setSaving(true);
     try {
       const { data, error } = await supabase
@@ -321,15 +418,25 @@ export function TravelOverviewPage() {
     <div className="space-y-8">
       <section className="grid min-h-[420px] items-center gap-8 rounded-[30px] border border-line bg-gradient-to-br from-[#FCEEF0] via-white to-blue-soft/70 px-6 py-8 shadow-milk lg:grid-cols-[1fr_360px] lg:px-10">
         <div className="max-w-2xl">
-          <span className="inline-flex rounded-pill bg-white/70 px-4 py-1.5 text-xs font-extrabold text-mint-deep shadow-sm">
-            travel journal
-          </span>
-          <h1 className="mt-5 font-display text-[clamp(2.6rem,8vw,5.4rem)] font-extrabold leading-[0.98] text-ink">
-            我的旅行
-          </h1>
-          <p className="mt-5 max-w-xl text-lg font-semibold leading-9 text-ink-2">
-            转一转我的足迹星球，再往下逛每一趟。城市、餐厅、地址和小心情都慢慢放进来。
-          </p>
+          <EditableText
+            aria-label="旅行页小标签"
+            value={texts.travel_overview_badge}
+            onSave={(value) => saveText("travel_overview_badge", value)}
+            inputClassName="inline-flex w-auto rounded-pill bg-white/70 px-4 py-1.5 text-xs font-extrabold text-mint-deep shadow-sm"
+          />
+          <EditableText
+            aria-label="旅行页标题"
+            value={texts.travel_overview_title}
+            onSave={(value) => saveText("travel_overview_title", value)}
+            inputClassName="mt-5 font-display text-[clamp(2.6rem,8vw,5.4rem)] font-extrabold leading-[0.98] text-ink"
+          />
+          <EditableText
+            aria-label="旅行页介绍"
+            value={texts.travel_overview_intro}
+            onSave={(value) => saveText("travel_overview_intro", value)}
+            multiline
+            inputClassName="mt-5 max-w-xl text-lg font-semibold leading-9 text-ink-2"
+          />
           <div className="mt-6 grid max-w-md grid-cols-3 gap-3">
             {stats.map((item) => (
               <div key={item.label} className="rounded-[18px] border border-line bg-white/75 px-4 py-3 text-center shadow-sm">
@@ -347,11 +454,16 @@ export function TravelOverviewPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-extrabold text-ink">
               <CalendarDays className="h-4 w-4 text-mint-deep" />
-              时间
+              <EditableText
+                aria-label="时间筛选标题"
+                value={texts.travel_filter_time}
+                onSave={(value) => saveText("travel_filter_time", value)}
+                inputClassName="h-8 rounded-pill px-2 text-sm font-extrabold text-ink"
+              />
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <FilterChip active={filter.year === "all"} onClick={() => setFilter((current) => ({ ...current, year: "all" }))}>
-                全部
+                {texts.travel_filter_all}
               </FilterChip>
               {years.map((year) => (
                 <FilterChip key={year} active={filter.year === year} onClick={() => setFilter((current) => ({ ...current, year }))}>
@@ -363,11 +475,16 @@ export function TravelOverviewPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-extrabold text-ink">
               <MapPin className="h-4 w-4 text-pink-deep" />
-              国家
+              <EditableText
+                aria-label="国家筛选标题"
+                value={texts.travel_filter_country}
+                onSave={(value) => saveText("travel_filter_country", value)}
+                inputClassName="h-8 rounded-pill px-2 text-sm font-extrabold text-ink"
+              />
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <FilterChip active={filter.country === "all"} onClick={() => setFilter((current) => ({ ...current, country: "all" }))}>
-                全部
+                {texts.travel_filter_all}
               </FilterChip>
               {countries.map((country) => (
                 <FilterChip key={country} active={filter.country === country} onClick={() => setFilter((current) => ({ ...current, country }))}>
@@ -378,14 +495,14 @@ export function TravelOverviewPage() {
           </div>
           <Button variant="pink" onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" />
-            新增旅行
+            {texts.travel_add_trip}
           </Button>
         </div>
 
         {filteredTrips.length > 0 ? (
           <div className="space-y-5">
             {filteredTrips.map((trip) => (
-              <TripRail key={trip.id} trip={trip} />
+              <TripRail key={trip.id} trip={trip} texts={texts} onUpdate={updateTrip} />
             ))}
           </div>
         ) : (
@@ -393,11 +510,21 @@ export function TravelOverviewPage() {
             <CardContent className="grid min-h-56 place-items-center p-8 text-center">
               <div>
                 <Sparkles className="mx-auto mb-3 h-8 w-8 text-mint-deep" />
-                <h2 className="font-display text-2xl font-extrabold text-ink">还没有旅行记录</h2>
-                <p className="mt-2 text-sm font-semibold text-slate">先加一趟旅行，再进去放地点、照片和视频。</p>
+                <EditableText
+                  aria-label="旅行空状态标题"
+                  value={texts.travel_empty_title}
+                  onSave={(value) => saveText("travel_empty_title", value)}
+                  inputClassName="font-display text-2xl font-extrabold text-ink"
+                />
+                <EditableText
+                  aria-label="旅行空状态描述"
+                  value={texts.travel_empty_desc}
+                  onSave={(value) => saveText("travel_empty_desc", value)}
+                  inputClassName="mt-2 text-sm font-semibold text-slate"
+                />
                 <Button className="mt-5" onClick={() => setDialogOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  新增旅行
+                  {texts.travel_add_trip}
                 </Button>
               </div>
             </CardContent>
@@ -408,8 +535,22 @@ export function TravelOverviewPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>新增旅行</DialogTitle>
-            <DialogDescription>先建一趟旅程，进去后再加每天的地点、照片和视频。</DialogDescription>
+            <DialogTitle asChild>
+              <EditableText
+                aria-label="新增旅行弹窗标题"
+                value={texts.travel_trip_dialog_title}
+                onSave={(value) => saveText("travel_trip_dialog_title", value)}
+                inputClassName="font-display text-2xl font-extrabold text-ink"
+              />
+            </DialogTitle>
+            <DialogDescription asChild>
+              <EditableText
+                aria-label="新增旅行弹窗说明"
+                value={texts.travel_trip_dialog_desc}
+                onSave={(value) => saveText("travel_trip_dialog_desc", value)}
+                inputClassName="text-sm text-slate"
+              />
+            </DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={saveTrip}>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -444,7 +585,7 @@ export function TravelOverviewPage() {
             </div>
             <Button type="submit" disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              保存旅行
+              {texts.travel_trip_dialog_save}
             </Button>
           </form>
         </DialogContent>
