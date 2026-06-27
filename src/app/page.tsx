@@ -21,7 +21,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace("/app/today");
+      router.replace("/app/home");
     }
   }, [loading, router, user]);
 
@@ -48,7 +48,7 @@ export default function HomePage() {
       description: "正在进入你的私人工作台。",
       tone: "success",
     });
-    router.replace("/app/today");
+    router.replace("/app/home");
   }
 
   return (

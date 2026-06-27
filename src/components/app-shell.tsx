@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   BriefcaseBusiness,
@@ -21,8 +24,11 @@ import {
 import { AuthGate } from "@/components/auth-gate";
 import { CorpusDialogProvider, useCorpusDialog } from "@/components/corpus-dialog-context";
 import { CorpusEntryDialog } from "@/components/corpus-entry-dialog";
+import { EditableText } from "@/components/editable-text";
 import { Button } from "@/components/ui/button";
 import { formatChineseDate } from "@/lib/dates";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/components/auth-provider";
 import { cn } from "@/lib/utils";
 
 const innerNav = [
@@ -39,12 +45,25 @@ const outerNav = [
   { href: "/app/validation", label: "验证看板", icon: LineChart, tone: "blue", disabled: true },
 ] as const;
 
+const shellTextDefaults = {
+  shell_brand: "Joey's personal domain ♡",
+  shell_nav_home: "首页",
+  shell_nav_english: "外贸英语",
+  shell_nav_jazz: "爵士档案",
+  shell_nav_travel: "旅行美食",
+  shell_nav_career: "职业历程",
+  shell_english_title: "外贸英语 ♡ 工作台",
+} as const;
+
+type ShellTextSlot = keyof typeof shellTextDefaults;
+type ShellTextMap = Record<ShellTextSlot, string>;
+
 const mainNav = [
-  { href: "/app/home", label: "首页", icon: Home, tone: "pink", match: (path: string) => path === "/app/home" },
-  { href: "/app/today", label: "外贸英语", icon: Globe2, tone: "pink", match: (path: string) => englishRoutes.has(path) },
-  { href: "/app/jazz", label: "爵士档案", icon: Music2, tone: "grape", match: (path: string) => path.startsWith("/app/jazz") },
-  { href: "/app/travel", label: "旅行美食", icon: Plane, tone: "mint", match: (path: string) => path.startsWith("/app/travel") },
-  { href: "/app/career", label: "职业历程", icon: BriefcaseBusiness, tone: "blue", match: (path: string) => path.startsWith("/app/career") },
+  { href: "/app/home", labelSlot: "shell_nav_home", icon: Home, tone: "pink", match: (path: string) => path === "/app/home" },
+  { href: "/app/today", labelSlot: "shell_nav_english", icon: Globe2, tone: "pink", match: (path: string) => englishRoutes.has(path) },
+  { href: "/app/jazz", labelSlot: "shell_nav_jazz", icon: Music2, tone: "grape", match: (path: string) => path.startsWith("/app/jazz") },
+  { href: "/app/travel", labelSlot: "shell_nav_travel", icon: Plane, tone: "mint", match: (path: string) => path.startsWith("/app/travel") },
+  { href: "/app/career", labelSlot: "shell_nav_career", icon: BriefcaseBusiness, tone: "blue", match: (path: string) => path.startsWith("/app/career") },
 ] as const;
 
 const englishRoutes = new Set([
@@ -108,23 +127,94 @@ function TopStrip() {
 
 function MainTopNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user } = useAuth();
+  const [texts, setTexts] = useState<ShellTextMap>(shellTextDefaults);
+  const slots = useMemo(() => Object.keys(shellTextDefaults) as ShellTextSlot[], []);
+
+  useEffect(() => {
+    if (!supabase || !user) return;
+    let alive = true;
+    supabase
+      .from("site_texts")
+      .select("slot, content")
+      .eq("user_id", user.id)
+      .in("slot", slots)
+      .then(({ data }) => {
+        if (!alive) return;
+        const nextTexts: ShellTextMap = { ...shellTextDefaults };
+        for (const row of data ?? []) {
+          if (slots.includes(row.slot as ShellTextSlot)) {
+            nextTexts[row.slot as ShellTextSlot] = row.content;
+          }
+        }
+        setTexts(nextTexts);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [slots, user]);
+
+  const saveText = useCallback(
+    async (slot: ShellTextSlot, content: string) => {
+      if (!supabase || !user) return;
+      const nextContent = content || shellTextDefaults[slot];
+      setTexts((current) => ({ ...current, [slot]: nextContent }));
+      await supabase
+        .from("site_texts")
+        .upsert({ user_id: user.id, slot, content: nextContent, updated_at: new Date().toISOString() }, { onConflict: "user_id,slot" });
+    },
+    [user],
+  );
+
+  function inputWidth(value: string, min = 3, max = 18) {
+    return `${Math.min(max, Math.max(min, Array.from(value).length + 1.4))}em`;
+  }
+
+  function navigate(event: MouseEvent<HTMLDivElement>, href: string) {
+    if ((event.target as HTMLElement).closest("input,textarea")) return;
+    router.push(href);
+  }
+
+  function navigateByKey(event: KeyboardEvent<HTMLDivElement>, href: string) {
+    if ((event.target as HTMLElement).closest("input,textarea")) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      router.push(href);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-[#FCF6F4]/88 px-4 py-1.5 backdrop-blur lg:px-8">
-      <div className="mx-auto flex max-w-7xl flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <Link href="/app/home" className="font-display text-[1.35rem] font-extrabold leading-none text-ink">
-          Joey&apos;s personal domain ♡
-        </Link>
-        <nav className="flex gap-2 overflow-x-auto pb-1 lg:pb-0" aria-label="个人主场导航">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-1 sm:flex-nowrap">
+        <div
+          role="link"
+          tabIndex={0}
+          className="max-w-full shrink-0 cursor-pointer"
+          onClick={(event) => navigate(event, "/app/home")}
+          onKeyDown={(event) => navigateByKey(event, "/app/home")}
+        >
+          <EditableText
+            aria-label="顶部站点名称"
+            value={texts.shell_brand}
+            onSave={(value) => saveText("shell_brand", value)}
+            inputClassName="h-8 max-w-[calc(100vw-2rem)] rounded-md bg-transparent px-0 py-0 font-display text-[1.05rem] font-extrabold leading-none text-ink sm:max-w-none sm:text-[1.35rem]"
+            inputStyle={{ width: inputWidth(texts.shell_brand, 9, 18) }}
+          />
+        </div>
+        <nav className="flex min-w-0 basis-full justify-start gap-2 overflow-x-auto pb-1 sm:ml-auto sm:basis-auto sm:justify-end lg:pb-0" aria-label="个人主场导航">
           {mainNav.map((item) => {
             const active = item.match(pathname);
             const Icon = item.icon;
             return (
-              <Link
+              <div
                 key={item.href}
-                href={item.href}
+                role="link"
+                tabIndex={0}
+                onClick={(event) => navigate(event, item.href)}
+                onKeyDown={(event) => navigateByKey(event, item.href)}
                 className={cn(
-                  "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-pill border px-3 text-[13px] font-extrabold transition",
+                  "inline-flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-pill border px-3 transition",
                   item.tone === "pink" &&
                     (active
                       ? "border-pink-line bg-pink-soft text-pink-deep"
@@ -144,8 +234,14 @@ function MainTopNav() {
                 )}
               >
                 <Icon className="h-3.5 w-3.5" />
-                {item.label}
-              </Link>
+                <EditableText
+                  aria-label="顶部导航名称"
+                  value={texts[item.labelSlot]}
+                  onSave={(value) => saveText(item.labelSlot, value)}
+                  inputClassName="h-6 rounded-md bg-transparent px-0 py-0 text-[13px] font-extrabold"
+                  inputStyle={{ width: inputWidth(texts[item.labelSlot], 2.4, 5.5) }}
+                />
+              </div>
             );
           })}
         </nav>

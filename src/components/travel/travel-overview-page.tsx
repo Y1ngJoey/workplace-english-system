@@ -404,6 +404,10 @@ export function TravelOverviewPage() {
     );
   }
 
+  function inlineWidth(value: string, min = 3.4, max = 8) {
+    return `${Math.min(max, Math.max(min, Array.from(value).length + 1.4))}em`;
+  }
+
   return (
     <div className="mx-auto max-w-[1100px] px-[18px] sm:px-[38px]">
       <section className="mb-2 flex flex-wrap items-start gap-[26px]">
@@ -438,23 +442,25 @@ export function TravelOverviewPage() {
         <div className="mt-[46px] flex min-w-[300px] flex-1 justify-start max-md:mt-4 max-md:justify-center">
           <div className="flex w-[clamp(196px,23vw,256px)] flex-col items-center">
             <TravelGlobe />
-            <div className="mt-3.5 flex items-center justify-center gap-1 whitespace-nowrap text-[11px] font-bold text-ink-2">
+            <div className="mt-3.5 flex flex-wrap items-center justify-center gap-1 text-[11px] font-bold text-ink-2">
               <EditableText
                 aria-label="星球说明"
                 value={texts.travel_planet_caption}
                 onSave={(value) => saveText("travel_planet_caption", value)}
                 className="inline-block"
-                inputClassName="h-6 w-[7.5rem] rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
+                inputClassName="h-6 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
+                inputStyle={{ width: inlineWidth(texts.travel_planet_caption, 7.5, 10) }}
               />
               <EditableText
                 aria-label="星球提示"
                 value={texts.travel_planet_hint}
                 onSave={(value) => saveText("travel_planet_hint", value)}
                 className="inline-block"
-                inputClassName="h-6 w-[5.5rem] rounded-md px-1 text-center text-[11px] font-semibold text-slate"
+                inputClassName="h-6 rounded-md px-1 text-center text-[11px] font-semibold text-slate"
+                inputStyle={{ width: inlineWidth(texts.travel_planet_hint, 5, 8) }}
               />
             </div>
-            <div className="mt-2 flex flex-nowrap justify-center gap-2">
+            <div className="mt-2 flex flex-wrap justify-center gap-2">
               {[
                 ["travel_legend_one", "#CC6E96"],
                 ["travel_legend_two", "#5C9F80"],
@@ -467,7 +473,8 @@ export function TravelOverviewPage() {
                     value={texts[slot as TravelTextSlot]}
                     onSave={(value) => saveText(slot as TravelTextSlot, value)}
                     className="inline-block"
-                    inputClassName="h-5 w-10 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
+                    inputClassName="h-5 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
+                    inputStyle={{ width: inlineWidth(texts[slot as TravelTextSlot], 2.4, 6.5) }}
                   />
                 </span>
               ))}
