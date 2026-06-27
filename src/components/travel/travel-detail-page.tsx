@@ -269,6 +269,10 @@ function formatDetailRange(trip: TravelTrip) {
   return `${range} · ${days} 天`;
 }
 
+function travelDetailInputWidth(value: string, min = 3.6, max = 10) {
+  return `${Math.min(max, Math.max(min, Array.from(value).length * 1.35 + 2))}em`;
+}
+
 function AddPlaceCard({
   texts,
   hintLines,
@@ -700,7 +704,8 @@ export function TravelDetailPage({ tripId }: { tripId: string }) {
                 value={trip.country ?? ""}
                 onSave={(value) => updateTrip({ country: value || null })}
                 className="inline-block"
-                inputClassName="h-5 w-12 rounded-md px-1 text-center text-[11px] font-extrabold text-mint-deep"
+                inputClassName="h-5 rounded-md px-1 text-center text-[11px] font-extrabold text-mint-deep"
+                inputStyle={{ width: travelDetailInputWidth(trip.country ?? "", 3.8, 8) }}
                 placeholder="国家未定"
               />
             </span>

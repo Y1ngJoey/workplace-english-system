@@ -125,9 +125,11 @@ function TopStrip() {
   );
 }
 
-function MainTopNav() {
-  const pathname = usePathname();
-  const router = useRouter();
+function shellInputWidth(value: string, min = 3, max = 22) {
+  return `${Math.min(max, Math.max(min, Array.from(value).length * 1.35 + 2))}em`;
+}
+
+function useShellTexts() {
   const { user } = useAuth();
   const [texts, setTexts] = useState<ShellTextMap>(shellTextDefaults);
   const slots = useMemo(() => Object.keys(shellTextDefaults) as ShellTextSlot[], []);
@@ -167,9 +169,13 @@ function MainTopNav() {
     [user],
   );
 
-  function inputWidth(value: string, min = 3, max = 18) {
-    return `${Math.min(max, Math.max(min, Array.from(value).length + 1.4))}em`;
-  }
+  return { texts, saveText };
+}
+
+function MainTopNav() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { texts, saveText } = useShellTexts();
 
   function navigate(event: MouseEvent<HTMLDivElement>, href: string) {
     if ((event.target as HTMLElement).closest("input,textarea")) return;
@@ -199,7 +205,7 @@ function MainTopNav() {
             value={texts.shell_brand}
             onSave={(value) => saveText("shell_brand", value)}
             inputClassName="h-8 max-w-[calc(100vw-2rem)] rounded-md bg-transparent px-0 py-0 font-display text-[1.05rem] font-extrabold leading-none text-ink sm:max-w-none sm:text-[1.35rem]"
-            inputStyle={{ width: inputWidth(texts.shell_brand, 9, 18) }}
+            inputStyle={{ width: shellInputWidth(texts.shell_brand, 9, 18) }}
           />
         </div>
         <nav className="flex min-w-0 basis-full justify-start gap-2 overflow-x-auto pb-1 sm:ml-auto sm:basis-auto sm:justify-end lg:pb-0" aria-label="个人主场导航">
@@ -239,7 +245,7 @@ function MainTopNav() {
                   value={texts[item.labelSlot]}
                   onSave={(value) => saveText(item.labelSlot, value)}
                   inputClassName="h-6 rounded-md bg-transparent px-0 py-0 text-[13px] font-extrabold"
-                  inputStyle={{ width: inputWidth(texts[item.labelSlot], 2.4, 5.5) }}
+                  inputStyle={{ width: shellInputWidth(texts[item.labelSlot], 3.6, 9) }}
                 />
               </div>
             );
@@ -247,6 +253,36 @@ function MainTopNav() {
         </nav>
       </div>
     </header>
+  );
+}
+
+function EditableEnglishTitle() {
+  const router = useRouter();
+  const { texts, saveText } = useShellTexts();
+
+  function navigate(event: MouseEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest("input,textarea")) return;
+    router.push("/app/today");
+  }
+
+  function navigateByKey(event: KeyboardEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest("input,textarea")) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      router.push("/app/today");
+    }
+  }
+
+  return (
+    <div role="link" tabIndex={0} className="cursor-pointer" onClick={navigate} onKeyDown={navigateByKey}>
+      <EditableText
+        aria-label="外贸英语侧栏标题"
+        value={texts.shell_english_title}
+        onSave={(value) => saveText("shell_english_title", value)}
+        inputClassName="h-9 rounded-md bg-transparent px-0 py-0 font-display text-2xl font-extrabold text-ink"
+        inputStyle={{ width: shellInputWidth(texts.shell_english_title, 8, 15) }}
+      />
+    </div>
   );
 }
 
@@ -272,9 +308,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
       <aside className="border-b border-line bg-card/80 px-4 py-4 backdrop-blur lg:min-h-[calc(100vh-73px)] lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
         <div className="mb-5 flex items-center justify-between gap-3 lg:block">
-          <Link href="/app/today" className="font-display text-2xl font-extrabold text-ink">
-            外贸英语 ♡ 工作台
-          </Link>
+          <EditableEnglishTitle />
           <Link
             href="/app/settings"
             className="inline-flex h-10 w-10 items-center justify-center rounded-pill text-slate hover:bg-line-2 lg:hidden"

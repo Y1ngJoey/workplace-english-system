@@ -108,6 +108,10 @@ function getTravelTextFallback(slot: TravelTextSlot) {
   return travelTextDefaults[slot];
 }
 
+function travelInlineWidth(value: string, min = 3.4, max = 10) {
+  return `${Math.min(max, Math.max(min, Array.from(value).length * 1.35 + 2))}em`;
+}
+
 function FilterChip({
   active,
   children,
@@ -232,14 +236,18 @@ function TripRail({
               aria-label="旅行国旗"
               value={trip.country_flag ?? ""}
               onSave={(value) => onUpdate(trip.id, { country_flag: value || null })}
-              inputClassName="h-6 w-8 rounded-pill px-1 text-center text-[11px] font-extrabold text-mint-deep"
+              className="inline-block"
+              inputClassName="h-6 rounded-pill px-1 text-center text-[11px] font-extrabold text-mint-deep"
+              inputStyle={{ width: travelInlineWidth(trip.country_flag ?? "", 2.6, 4.2) }}
               placeholder="🇯🇵"
             />
             <EditableText
               aria-label="旅行国家"
               value={trip.country ?? ""}
               onSave={(value) => onUpdate(trip.id, { country: value || null })}
-              inputClassName="h-6 w-16 rounded-pill px-1.5 text-[11px] font-extrabold text-mint-deep"
+              className="inline-block"
+              inputClassName="h-6 rounded-pill px-1.5 text-center text-[11px] font-extrabold text-mint-deep"
+              inputStyle={{ width: travelInlineWidth(trip.country ?? "", 3.6, 8) }}
               placeholder="国家未定"
             />
           </span>
@@ -404,10 +412,6 @@ export function TravelOverviewPage() {
     );
   }
 
-  function inlineWidth(value: string, min = 3.4, max = 8) {
-    return `${Math.min(max, Math.max(min, Array.from(value).length + 1.4))}em`;
-  }
-
   return (
     <div className="mx-auto max-w-[1100px] px-[18px] sm:px-[38px]">
       <section className="mb-2 flex flex-wrap items-start gap-[26px]">
@@ -449,7 +453,7 @@ export function TravelOverviewPage() {
                 onSave={(value) => saveText("travel_planet_caption", value)}
                 className="inline-block"
                 inputClassName="h-6 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
-                inputStyle={{ width: inlineWidth(texts.travel_planet_caption, 7.5, 10) }}
+                inputStyle={{ width: travelInlineWidth(texts.travel_planet_caption, 8.5, 12) }}
               />
               <EditableText
                 aria-label="星球提示"
@@ -457,7 +461,7 @@ export function TravelOverviewPage() {
                 onSave={(value) => saveText("travel_planet_hint", value)}
                 className="inline-block"
                 inputClassName="h-6 rounded-md px-1 text-center text-[11px] font-semibold text-slate"
-                inputStyle={{ width: inlineWidth(texts.travel_planet_hint, 5, 8) }}
+                inputStyle={{ width: travelInlineWidth(texts.travel_planet_hint, 6.5, 10) }}
               />
             </div>
             <div className="mt-2 flex flex-wrap justify-center gap-2">
@@ -474,7 +478,7 @@ export function TravelOverviewPage() {
                     onSave={(value) => saveText(slot as TravelTextSlot, value)}
                     className="inline-block"
                     inputClassName="h-5 rounded-md px-1 text-center text-[11px] font-bold text-ink-2"
-                    inputStyle={{ width: inlineWidth(texts[slot as TravelTextSlot], 2.4, 6.5) }}
+                    inputStyle={{ width: travelInlineWidth(texts[slot as TravelTextSlot], 4, 8) }}
                   />
                 </span>
               ))}

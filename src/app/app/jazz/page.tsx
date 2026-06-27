@@ -54,7 +54,7 @@ function makeTimelineCurvePath(height: number, count: number) {
   const points = Array.from({ length: Math.max(count, 1) }, (_, index) => {
     const point = getTimelinePoint(index, Math.max(count, 1), height);
     return {
-      x: index % 2 === 0 ? 470 : 290,
+      x: index % 2 === 0 ? 290 : 470,
       y: Number.parseFloat(point.y),
     };
   });
@@ -78,7 +78,7 @@ function getTimelinePoint(index: number, count: number, height: number) {
   const itemCount = Math.max(count, 1);
   const margin = itemCount <= 2 ? height * 0.36 : height * 0.14;
   const y = itemCount === 1 ? height / 2 : margin + (index / (itemCount - 1)) * (height - margin * 2);
-  const right = index % 2 === 0;
+  const right = index % 2 !== 0;
 
   return {
     cardLeft: right ? "64%" : "2%",
