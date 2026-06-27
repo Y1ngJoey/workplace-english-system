@@ -29,6 +29,9 @@ const exportTables = [
   "growth_log",
   "grammar_practice",
   "idea_bank",
+  "trips",
+  "places",
+  "place_media",
 ] as const satisfies readonly TableName[];
 
 const csvTables = ["corpus_entries", "daily_logs", "weekly_reviews"] as const satisfies readonly TableName[];

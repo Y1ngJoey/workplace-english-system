@@ -122,6 +122,8 @@ export type UserSettings = {
 };
 
 export type Visibility = "private" | "public";
+export type TravelPlaceType = "stay" | "food" | "see" | "shop";
+export type TravelMediaKind = "photo" | "video";
 
 export type SiteText = {
   id: string;
@@ -164,6 +166,48 @@ export type JazzInspiration = {
   created_at: string | null;
 };
 
+export type TravelTrip = {
+  id: string;
+  user_id: string;
+  title: string;
+  country: string | null;
+  country_flag: string | null;
+  date_start: string | null;
+  date_end: string | null;
+  intro: string | null;
+  cover_emoji: string | null;
+  cover_url: string | null;
+  sort_order: number;
+  created_at: string | null;
+};
+
+export type TravelPlace = {
+  id: string;
+  user_id: string;
+  trip_id: string;
+  day_label: string;
+  date_label: string;
+  type: string;
+  type_color: TravelPlaceType;
+  name: string;
+  address: string | null;
+  mood: string | null;
+  visibility: Visibility;
+  sort_order: number;
+  created_at: string | null;
+};
+
+export type TravelPlaceMedia = {
+  id: string;
+  user_id: string;
+  place_id: string;
+  kind: TravelMediaKind;
+  url: string;
+  platform: string | null;
+  sort_order: number;
+  created_at: string | null;
+};
+
 type RowMap = {
   corpus_entries: CorpusEntry;
   daily_logs: DailyLog;
@@ -179,6 +223,9 @@ type RowMap = {
   jazz_timeline: JazzTimeline;
   jazz_compare: JazzCompare;
   jazz_inspiration: JazzInspiration;
+  trips: TravelTrip;
+  places: TravelPlace;
+  place_media: TravelPlaceMedia;
   idea_bank: {
     id: string;
     user_id: string;

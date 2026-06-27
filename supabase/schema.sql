@@ -245,6 +245,58 @@ create table if not exists public.jazz_inspiration (
   created_at timestamptz default now()
 );
 
+-- ===== 旅行美食 =====
+create table if not exists public.trips (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null default '',
+  country text,
+  country_flag text,
+  date_start date,
+  date_end date,
+  intro text,
+  cover_emoji text,
+  cover_url text,
+  sort_order int not null default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.places (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  trip_id uuid not null references public.trips(id) on delete cascade,
+  day_label text not null default '',
+  date_label text not null default '',
+  type text not null default '',
+  type_color text not null default 'see' check (type_color in ('stay', 'food', 'see', 'shop')),
+  name text not null default '',
+  address text,
+  mood text,
+  visibility text not null default 'private' check (visibility in ('private', 'public')),
+  sort_order int not null default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.place_media (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  place_id uuid not null references public.places(id) on delete cascade,
+  kind text not null check (kind in ('photo', 'video')),
+  url text not null,
+  platform text,
+  sort_order int not null default 0,
+  created_at timestamptz default now()
+);
+
+create index if not exists trips_user_sort_idx
+  on public.trips (user_id, sort_order, date_start desc);
+
+create index if not exists places_trip_sort_idx
+  on public.places (trip_id, sort_order);
+
+create index if not exists place_media_place_sort_idx
+  on public.place_media (place_id, sort_order);
+
 drop trigger if exists corpus_entries_set_updated_at on public.corpus_entries;
 create trigger corpus_entries_set_updated_at
   before update on public.corpus_entries
@@ -275,12 +327,18 @@ alter table public.site_texts enable row level security;
 alter table public.jazz_timeline enable row level security;
 alter table public.jazz_compare enable row level security;
 alter table public.jazz_inspiration enable row level security;
+alter table public.trips enable row level security;
+alter table public.places enable row level security;
+alter table public.place_media enable row level security;
 
 grant usage on schema public to authenticated, anon;
 grant select, insert, update, delete on public.site_texts to authenticated;
 grant select, insert, update, delete on public.jazz_timeline to authenticated;
 grant select, insert, update, delete on public.jazz_compare to authenticated;
 grant select, insert, update, delete on public.jazz_inspiration to authenticated;
+grant select, insert, update, delete on public.trips to authenticated;
+grant select, insert, update, delete on public.places to authenticated;
+grant select, insert, update, delete on public.place_media to authenticated;
 
 create policy "Admins can read own admin row"
   on public.app_admins for select to authenticated
@@ -416,5 +474,41 @@ create policy "Users can manage own jazz inspiration"
   on public.jazz_inspiration for all to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+create policy "Users can manage own travel trips"
+  on public.trips for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can manage own travel places"
+  on public.places for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+create policy "Users can manage own travel media"
+  on public.place_media for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+insert into storage.buckets (id, name, public)
+values ('travel-photos', 'travel-photos', true)
+on conflict (id) do update set public = excluded.public;
+
+create policy "Anyone can read travel photos"
+  on storage.objects for select to anon, authenticated
+  using (bucket_id = 'travel-photos');
+
+create policy "Users can upload own travel photos"
+  on storage.objects for insert to authenticated
+  with check (bucket_id = 'travel-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Users can update own travel photos"
+  on storage.objects for update to authenticated
+  using (bucket_id = 'travel-photos' and (storage.foldername(name))[1] = auth.uid()::text)
+  with check (bucket_id = 'travel-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "Users can delete own travel photos"
+  on storage.objects for delete to authenticated
+  using (bucket_id = 'travel-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
 select pg_notify('pgrst', 'reload schema');
