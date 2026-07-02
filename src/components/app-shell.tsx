@@ -55,6 +55,11 @@ const shellTextDefaults = {
   shell_english_title: "外贸英语 ♡ 工作台",
 } as const;
 
+const pmWorkbenchBackground = {
+  background:
+    "radial-gradient(circle at 8% 4%, rgba(246,185,202,.46), transparent 24%), radial-gradient(circle at 88% 0%, rgba(141,183,255,.38), transparent 28%), radial-gradient(circle at 78% 92%, rgba(139,220,189,.34), transparent 25%), linear-gradient(135deg,#fff9ee 0%,#f9fbff 42%,#f4fff9 100%)",
+};
+
 type ShellTextSlot = keyof typeof shellTextDefaults;
 type ShellTextMap = Record<ShellTextSlot, string>;
 
@@ -290,6 +295,17 @@ function ShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const showEnglishShell = englishRoutes.has(pathname);
   const showTravelShell = pathname.startsWith("/app/travel");
+  const showPmWorkbenchShell = pathname === "/app/today";
+
+  if (showPmWorkbenchShell) {
+    return (
+      <div className="min-h-screen" style={pmWorkbenchBackground}>
+        <MainTopNav />
+        <main className="min-w-0">{children}</main>
+        <CorpusEntryDialog />
+      </div>
+    );
+  }
 
   if (!showEnglishShell) {
     return (
